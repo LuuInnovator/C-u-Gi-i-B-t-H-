@@ -3,14 +3,14 @@ import { useGame } from '../context/GameContext';
 import { ScrollText, Trash2, Save, Download, Upload } from 'lucide-react';
 
 const SettingsPanel: React.FC = () => {
-  const { state, saveGame } = useGame();
+  const { state, saveGame, resetGame } = useGame();
   const [saveStatus, setSaveStatus] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleReset = () => {
       if (window.confirm("CẢNH BÁO: Bạn có chắc chắn muốn 'Trọng Sinh' (Xóa toàn bộ dữ liệu) không? Hành động này không thể hoàn tác!")) {
-          localStorage.removeItem('cuu-gioi-bat-hu-save');
-          window.location.reload();
+          // Use the context function to safely handle the reset race condition
+          resetGame();
       }
   };
 
@@ -78,7 +78,7 @@ const SettingsPanel: React.FC = () => {
        <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-col gap-6">
             <div className="text-sm text-slate-400 border-b border-slate-700 pb-4">
                 <p>Đạo Hiệu: <span className="text-jade-400 font-bold text-lg">{state.playerName}</span></p>
-                <p>Phiên bản: <span className="text-slate-500">Alpha 1.0.5 (Export/Import)</span></p>
+                <p>Phiên bản: <span className="text-slate-500">Alpha 1.0.6 (Fix Reset)</span></p>
                 <p className="mt-2 text-xs text-slate-500 italic">Dữ liệu được lưu tại trình duyệt này.</p>
             </div>
             

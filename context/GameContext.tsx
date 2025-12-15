@@ -242,6 +242,7 @@ interface GameContextType {
   dispatch: React.Dispatch<GameAction>;
   getCurrentRealm: () => Realm;
   saveGame: () => void;
+  resetGame: () => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -265,6 +266,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Ref to hold state for setInterval/EventListener without causing re-renders/resets
   const stateRef = useRef(state);
+  // NEW: Ref to signal that we are resetting data, so STOP SAVING
+  const isResettingRef = useRef(false);
 
   // Update ref whenever state changes
   useEffect(() => {
@@ -282,17 +285,25 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Manual Save Function
   const saveGame = useCallback(() => {
+      if (isResettingRef.current) return; // Prevent save if resetting
       try {
         localStorage.setItem('cuu-gioi-bat-hu-save', JSON.stringify(stateRef.current));
-        // console.log("Game Saved");
       } catch (e) {
         console.error("Save failed", e);
       }
   }, []);
 
+  // NEW: Robust Reset Function
+  const resetGame = useCallback(() => {
+      isResettingRef.current = true; // Lock saving mechanism
+      localStorage.removeItem('cuu-gioi-bat-hu-save');
+      window.location.reload();
+  }, []);
+
   // Auto-Save Logic (FIXED: Uses stateRef to prevent interval clearing)
   useEffect(() => {
       const handleSave = () => {
+          if (isResettingRef.current) return; // Crucial check!
           localStorage.setItem('cuu-gioi-bat-hu-save', JSON.stringify(stateRef.current));
       };
 
@@ -313,7 +324,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [state.realmIndex]);
 
   return (
-    <GameContext.Provider value={{ state, dispatch, getCurrentRealm, saveGame }}>
+    <GameContext.Provider value={{ state, dispatch, getCurrentRealm, saveGame, resetGame }}>
       {children}
     </GameContext.Provider>
   );
