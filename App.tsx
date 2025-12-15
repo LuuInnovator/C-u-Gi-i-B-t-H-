@@ -3,8 +3,10 @@ import Sidebar from './components/Sidebar';
 import CultivationPanel from './components/CultivationPanel';
 import InventoryPanel from './components/InventoryPanel';
 import ExplorationPanel from './components/ExplorationPanel';
+import SettingsPanel from './components/SettingsPanel';
+import WelcomeModal from './components/WelcomeModal';
 import { useGame } from './context/GameContext';
-import { ScrollText, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('cultivation');
@@ -18,20 +20,8 @@ const App: React.FC = () => {
         return <InventoryPanel />;
       case 'exploration':
         return <ExplorationPanel />;
-      case 'logs':
-        return (
-             <div className="p-8 h-full flex flex-col">
-                <h2 className="text-xl font-bold text-slate-200 mb-4 flex items-center"><ScrollText className="mr-2"/> Toàn Bộ Nhật Ký</h2>
-                <div className="flex-1 overflow-y-auto space-y-2 bg-ink-800 p-4 rounded-lg border border-slate-700 font-mono text-sm">
-                    {state.logs.map((log) => (
-                        <div key={log.id} className="border-b border-slate-700/50 pb-1">
-                            <span className="text-slate-500 text-xs">[{new Date(log.timestamp).toLocaleTimeString()}]</span> 
-                            <span className={log.type === 'combat' ? 'text-orange-300' : log.type === 'success' ? 'text-jade-400' : log.type === 'danger' ? 'text-red-400' : 'text-slate-300'}> {log.message}</span>
-                        </div>
-                    ))}
-                </div>
-             </div>
-        );
+      case 'settings':
+        return <SettingsPanel />;
       default:
         return (
             <div className="flex flex-col items-center justify-center h-full text-slate-500">
@@ -50,10 +40,13 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-ink-900 text-slate-200 overflow-hidden font-sans">
+      {/* Show Welcome Screen if player name is default */}
+      {state.playerName === 'Đạo Hữu Vô Danh' && <WelcomeModal />}
+
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       
       {/* Main Content Area with Thematic Background */}
-      <main className="flex-1 flex flex-col h-full relative overflow-hidden bg-gradient-to-br from-slate-900 via-ink-900 to-black">
+      <main className="flex-1 flex flex-col h-full relative overflow-hidden bg-gradient-to-br from-slate-900 via-ink-900 to-black pb-[80px] md:pb-0">
         
         {/* Decorative ambient glowing orbs (Qi/Linh Khí effect) */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">

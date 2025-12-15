@@ -204,6 +204,9 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
         return newState;
     }
 
+    case 'SET_PLAYER_NAME':
+        return { ...state, playerName: action.payload };
+
     default:
       return state;
   }

@@ -40,6 +40,7 @@ export interface LogEntry {
 }
 
 export interface GameState {
+  playerName: string;
   resources: Resources;
   realmIndex: number;
   clickMultiplier: number;
@@ -60,4 +61,5 @@ export type GameAction =
   | { type: 'STOP_EXPLORATION' }
   | { type: 'CRAFT_ITEM'; payload: { itemId: string; cost: Partial<Resources> } }
   | { type: 'USE_ITEM'; payload: string }
-  | { type: 'ADD_LOG'; payload: Omit<LogEntry, 'id' | 'timestamp'> };
+  | { type: 'ADD_LOG'; payload: Omit<LogEntry, 'id' | 'timestamp'> }
+  | { type: 'SET_PLAYER_NAME'; payload: string };

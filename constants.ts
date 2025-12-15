@@ -39,6 +39,7 @@ export const CRAFTABLE_ITEMS = [
 ];
 
 export const INITIAL_STATE = {
+  playerName: 'Đạo Hữu Vô Danh',
   resources: {
     qi: 0,
     maxQi: 100,
