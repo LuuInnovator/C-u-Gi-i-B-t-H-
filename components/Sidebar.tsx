@@ -10,7 +10,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const menuItems = [
     { id: 'cultivation', label: 'Tu Luyện', icon: Sparkles },
     { id: 'inventory', label: 'Túi Đồ', icon: Backpack },
-    { id: 'exploration', label: 'Thám Hiểm', icon: Mountain },
+    { id: 'exploration', label: 'Du Ngoạn', icon: Mountain },
     { id: 'sect', label: 'Tông Môn', icon: Swords }, // Future feature
     { id: 'logs', label: 'Nhật Ký', icon: ScrollText },
   ];

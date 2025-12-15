@@ -14,10 +14,10 @@ const ExplorationPanel: React.FC = () => {
       <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
         <div className="flex justify-between items-center mb-2">
             <h2 className="font-bold text-lg text-slate-200 flex items-center">
-                <Mountain className="mr-2 text-indigo-400" /> Thám Hiểm
+                <Mountain className="mr-2 text-indigo-400" /> Du Ngoạn Cửu Giới
             </h2>
             <div className="text-sm text-slate-400">
-                {state.isExploring ? <span className="text-green-400 animate-pulse">● Đang thám hiểm</span> : <span className="text-slate-500">● Đang nghỉ ngơi</span>}
+                {state.isExploring ? <span className="text-green-400 animate-pulse">● Đang du ngoạn</span> : <span className="text-slate-500">● Đang nghỉ ngơi</span>}
             </div>
         </div>
 
@@ -54,7 +54,7 @@ const ExplorationPanel: React.FC = () => {
                 disabled={state.hp < state.maxHp * 0.2}
                 className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white px-8 py-3 rounded-lg font-bold shadow-lg transition-all w-full max-w-sm"
             >
-                {state.hp < state.maxHp * 0.2 ? "Cần Hồi Phục..." : "Xuất Sơn Thám Hiểm"}
+                {state.hp < state.maxHp * 0.2 ? "Cần Hồi Phục..." : "Xuất Sơn Du Ngoạn"}
             </button>
         )}
       </div>

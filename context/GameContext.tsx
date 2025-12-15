@@ -25,25 +25,30 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
         // Heal slowly if not dead
         if (state.hp > 0) {
             // Encounter chance per tick
-            if (Math.random() < 0.05) { // 5% chance per tick approx
+            // INCREASED CHANCE: 0.05 -> 0.20 (20% per tick/second)
+            if (Math.random() < 0.20) { 
                 const monsterDmg = Math.max(1, Math.floor(currentRealm.id * 2 * Math.random()));
-                const playerDmg = currentRealm.attack;
                 
                 // Player takes damage
                 newHp = Math.max(0, state.hp - Math.max(0, monsterDmg - currentRealm.defense));
                 
-                // Loot logic
-                const herbsFound = Math.floor(Math.random() * 2) + 1;
-                const oresFound = Math.random() < 0.3 ? 1 : 0;
+                // Loot logic - INCREASED DROP RATES
+                // Herbs: 1-4
+                const herbsFound = Math.floor(Math.random() * 4) + 1;
+                // Ores: 30% chance for 1-2
+                const oresFound = Math.random() < 0.3 ? Math.floor(Math.random() * 2) + 1 : 0;
+                // Spirit Stones: 0-5
+                const stonesFound = Math.floor(Math.random() * 6);
+
                 newResources.herbs += herbsFound;
                 newResources.ores += oresFound;
-                newResources.spiritStones += Math.floor(Math.random() * 3);
+                newResources.spiritStones += stonesFound;
 
                 newLogs.unshift({
                     id: Date.now(),
                     timestamp: Date.now(),
                     type: 'combat',
-                    message: `Gặp yêu thú! Nhận ${monsterDmg} sát thương. Thu được ${herbsFound} Linh Thảo.`
+                    message: `Gặp sự kiện! Nhận ${monsterDmg} sát thương. Thu được: ${herbsFound} Thảo, ${stonesFound} Đá.`
                 });
             }
         } else {
@@ -52,7 +57,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 id: Date.now(),
                 timestamp: Date.now(),
                 type: 'danger',
-                message: `Bạn đã trọng thương! Thám hiểm kết thúc.`
+                message: `Bạn đã trọng thương! Chuyến du ngoạn kết thúc.`
             });
             return {
                 ...state,
@@ -121,7 +126,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
     }
 
     case 'START_EXPLORATION':
-      return { ...state, isExploring: true, logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: 'Bắt đầu rời động phủ thám hiểm...' }, ...state.logs] };
+      return { ...state, isExploring: true, logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: 'Bắt đầu rời động phủ du ngoạn...' }, ...state.logs] };
 
     case 'STOP_EXPLORATION':
       return { ...state, isExploring: false, logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: 'Thu hồi thần thức, quay về động phủ.' }, ...state.logs] };

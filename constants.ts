@@ -11,6 +11,14 @@ export const REALMS: Realm[] = [
   { id: 7, name: 'Trúc Cơ - Trung Kỳ', baseQiGeneration: 60, maxQiCap: 25000, breakthroughChance: 0.45, attack: 80, defense: 40 },
   { id: 8, name: 'Trúc Cơ - Hậu Kỳ', baseQiGeneration: 100, maxQiCap: 60000, breakthroughChance: 0.4, attack: 120, defense: 60 },
   { id: 9, name: 'Kim Đan - Sơ Kỳ', baseQiGeneration: 250, maxQiCap: 150000, breakthroughChance: 0.2, attack: 300, defense: 150 },
+  { id: 10, name: 'Kim Đan - Trung Kỳ', baseQiGeneration: 500, maxQiCap: 350000, breakthroughChance: 0.18, attack: 500, defense: 300 },
+  { id: 11, name: 'Kim Đan - Hậu Kỳ', baseQiGeneration: 1000, maxQiCap: 800000, breakthroughChance: 0.15, attack: 800, defense: 500 },
+  { id: 12, name: 'Nguyên Anh - Sơ Kỳ', baseQiGeneration: 2500, maxQiCap: 2000000, breakthroughChance: 0.1, attack: 2000, defense: 1200 },
+  { id: 13, name: 'Nguyên Anh - Trung Kỳ', baseQiGeneration: 5000, maxQiCap: 5000000, breakthroughChance: 0.08, attack: 4000, defense: 2500 },
+  { id: 14, name: 'Nguyên Anh - Hậu Kỳ', baseQiGeneration: 10000, maxQiCap: 12000000, breakthroughChance: 0.05, attack: 8000, defense: 5000 },
+  { id: 15, name: 'Hóa Thần - Sơ Kỳ', baseQiGeneration: 25000, maxQiCap: 30000000, breakthroughChance: 0.03, attack: 20000, defense: 15000 },
+  { id: 16, name: 'Hóa Thần - Trung Kỳ', baseQiGeneration: 60000, maxQiCap: 80000000, breakthroughChance: 0.02, attack: 50000, defense: 40000 },
+  { id: 17, name: 'Hóa Thần - Hậu Kỳ', baseQiGeneration: 150000, maxQiCap: 200000000, breakthroughChance: 0.01, attack: 120000, defense: 100000 },
 ];
 
 export const CRAFTABLE_ITEMS = [
