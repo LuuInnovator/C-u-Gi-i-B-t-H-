@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react';
 import { GameState, GameAction, LogEntry, Realm, Item } from '../types';
 import { REALMS, INITIAL_STATE, CRAFTABLE_ITEMS } from '../constants';
 
@@ -16,7 +16,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
       let newQi = state.resources.qi + qiGain;
       if (newQi > currentRealm.maxQiCap) newQi = currentRealm.maxQiCap;
 
-      // 2. Handle Exploration Logic (Simple Combat Loop)
+      // 2. Handle Exploration Logic (Combat & Loot Loop)
       let newLogs = [...state.logs];
       let newResources = { ...state.resources, qi: newQi };
       let newHp = state.hp;
@@ -24,21 +24,37 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
       if (state.isExploring) {
         // Heal slowly if not dead
         if (state.hp > 0) {
-            // Encounter chance per tick
-            // INCREASED CHANCE: 0.05 -> 0.20 (20% per tick/second)
-            if (Math.random() < 0.20) { 
-                const monsterDmg = Math.max(1, Math.floor(currentRealm.id * 2 * Math.random()));
+            // Encounter chance per tick (Increased to 50% - faster exploration)
+            if (Math.random() < 0.50) { 
+                // --- SCALING MONSTER DAMAGE ---
+                // Monster attack power is roughly 60% - 90% of the Player's Realm Attack stat.
+                // This ensures monsters scale with the player.
+                const monsterPower = Math.floor(currentRealm.attack * (0.6 + Math.random() * 0.3));
+                
+                // Damage calculation: Monster Atk - Player Def (Min 1 damage)
+                // We add a small flat scaling (currentRealm.id * 2) to ensure even low tiers take chip damage.
+                const damageTaken = Math.max(1, (monsterPower + (currentRealm.id * 2)) - currentRealm.defense);
                 
                 // Player takes damage
-                newHp = Math.max(0, state.hp - Math.max(0, monsterDmg - currentRealm.defense));
+                newHp = Math.max(0, state.hp - damageTaken);
                 
-                // Loot logic - INCREASED DROP RATES
-                // Herbs: 1-4
-                const herbsFound = Math.floor(Math.random() * 4) + 1;
-                // Ores: 30% chance for 1-2
-                const oresFound = Math.random() < 0.3 ? Math.floor(Math.random() * 2) + 1 : 0;
-                // Spirit Stones: 0-5
-                const stonesFound = Math.floor(Math.random() * 6);
+                // --- SCALING LOOT ---
+                // Loot increases significantly with Realm Level (currentRealm.id)
+                
+                // Herbs: Base (1-3) + Realm Level
+                const herbsFound = Math.floor(Math.random() * 3) + 1 + currentRealm.id;
+                
+                // Ores: Base chance 30% + 1% per Realm Level. 
+                // Quantity: Base (1-2) + 1 for every 3 Realm Levels.
+                const oreChance = 0.3 + (currentRealm.id * 0.01);
+                let oresFound = 0;
+                if (Math.random() < oreChance) {
+                    oresFound = Math.floor(Math.random() * 2) + 1 + Math.floor(currentRealm.id / 3);
+                }
+
+                // Spirit Stones: Base (1-10) + (Realm Level * 8)
+                // Higher realms yield much more money.
+                const stonesFound = Math.floor(Math.random() * 10) + 1 + (currentRealm.id * 8);
 
                 newResources.herbs += herbsFound;
                 newResources.ores += oresFound;
@@ -48,7 +64,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                     id: Date.now(),
                     timestamp: Date.now(),
                     type: 'combat',
-                    message: `Gặp sự kiện! Nhận ${monsterDmg} sát thương. Thu được: ${herbsFound} Thảo, ${stonesFound} Đá.`
+                    message: `Gặp yêu thú! Chịu ${damageTaken} sát thương. Thu được: ${herbsFound} Thảo, ${oresFound} Khoáng, ${stonesFound} Linh Thạch.`
                 });
             }
         } else {
@@ -68,7 +84,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             }
         }
       } else {
-        // Regen HP when idle
+        // Regen HP when idle (5% max HP per second)
         newHp = Math.min(state.maxHp, state.hp + (state.maxHp * 0.05 * deltaSeconds));
       }
 
@@ -126,6 +142,13 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
     }
 
     case 'START_EXPLORATION':
+      // Block mortals (Realm ID 0)
+      if (state.realmIndex === 0) {
+          return {
+             ...state,
+             logs: [{ id: Date.now(), timestamp: Date.now(), type: 'warning', message: 'Phàm nhân thân thể yếu đuối, không thể rời núi du ngoạn. Hãy đạt Luyện Khí!' }, ...state.logs] 
+          };
+      }
       return { ...state, isExploring: true, logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: 'Bắt đầu rời động phủ du ngoạn...' }, ...state.logs] };
 
     case 'STOP_EXPLORATION':
@@ -218,6 +241,7 @@ interface GameContextType {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
   getCurrentRealm: () => Realm;
+  saveGame: () => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -239,6 +263,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
      return initial;
   });
 
+  // Ref to hold state for setInterval/EventListener without causing re-renders/resets
+  const stateRef = useRef(state);
+
+  // Update ref whenever state changes
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
   // Game Loop
   useEffect(() => {
     const tickRate = 1000; // 1 second
@@ -248,20 +280,40 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-Save
+  // Manual Save Function
+  const saveGame = useCallback(() => {
+      try {
+        localStorage.setItem('cuu-gioi-bat-hu-save', JSON.stringify(stateRef.current));
+        // console.log("Game Saved");
+      } catch (e) {
+        console.error("Save failed", e);
+      }
+  }, []);
+
+  // Auto-Save Logic (FIXED: Uses stateRef to prevent interval clearing)
   useEffect(() => {
-      const saveInterval = setInterval(() => {
-          localStorage.setItem('cuu-gioi-bat-hu-save', JSON.stringify(state));
-      }, 5000);
-      return () => clearInterval(saveInterval);
-  }, [state]);
+      const handleSave = () => {
+          localStorage.setItem('cuu-gioi-bat-hu-save', JSON.stringify(stateRef.current));
+      };
+
+      const saveInterval = setInterval(handleSave, 5000); // Save every 5s
+      
+      // Save on tab close/refresh
+      window.addEventListener('beforeunload', handleSave);
+
+      return () => {
+          clearInterval(saveInterval);
+          window.removeEventListener('beforeunload', handleSave);
+          handleSave(); // Save one last time on unmount
+      };
+  }, []); // Empty dependency array = interval runs consistently
 
   const getCurrentRealm = useCallback(() => {
       return REALMS[state.realmIndex];
   }, [state.realmIndex]);
 
   return (
-    <GameContext.Provider value={{ state, dispatch, getCurrentRealm }}>
+    <GameContext.Provider value={{ state, dispatch, getCurrentRealm, saveGame }}>
       {children}
     </GameContext.Provider>
   );

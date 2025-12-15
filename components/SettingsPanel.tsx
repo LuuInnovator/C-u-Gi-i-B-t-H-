@@ -1,15 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
-import { ScrollText, Trash2 } from 'lucide-react';
+import { ScrollText, Trash2, Save } from 'lucide-react';
 
 const SettingsPanel: React.FC = () => {
-  const { state } = useGame();
+  const { state, saveGame } = useGame();
+  const [saveStatus, setSaveStatus] = useState<string>('');
 
   const handleReset = () => {
       if (window.confirm("CẢNH BÁO: Bạn có chắc chắn muốn 'Trọng Sinh' (Xóa toàn bộ dữ liệu) không? Hành động này không thể hoàn tác!")) {
           localStorage.removeItem('cuu-gioi-bat-hu-save');
           window.location.reload();
       }
+  };
+
+  const handleManualSave = () => {
+      saveGame();
+      setSaveStatus('Đã lưu!');
+      setTimeout(() => setSaveStatus(''), 2000);
   };
 
   return (
@@ -22,18 +29,31 @@ const SettingsPanel: React.FC = () => {
        </div>
 
        {/* Game Info / Actions */}
-       <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-sm text-slate-400">
-                <p>Đạo Hiệu: <span className="text-jade-400 font-bold">{state.playerName}</span></p>
-                <p>Phiên bản: <span className="text-slate-500">Alpha 1.0.3</span></p>
+       <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-col gap-4">
+            <div className="flex justify-between items-start md:items-center flex-col md:flex-row gap-4">
+                <div className="text-sm text-slate-400">
+                    <p>Đạo Hiệu: <span className="text-jade-400 font-bold">{state.playerName}</span></p>
+                    <p>Phiên bản: <span className="text-slate-500">Alpha 1.0.4 (Đã sửa lỗi lưu)</span></p>
+                </div>
+                
+                <div className="flex space-x-3">
+                    <button 
+                        onClick={handleManualSave}
+                        className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition-colors text-sm shadow-lg font-bold"
+                    >
+                        <Save size={16} />
+                        <span>{saveStatus || "Lưu Dữ Liệu"}</span>
+                    </button>
+
+                    <button 
+                        onClick={handleReset}
+                        className="flex items-center space-x-2 px-4 py-2 bg-red-900/30 border border-red-700/50 hover:bg-red-900/50 text-red-400 rounded transition-colors text-sm"
+                    >
+                        <Trash2 size={16} />
+                        <span>Trọng Sinh</span>
+                    </button>
+                </div>
             </div>
-            <button 
-                onClick={handleReset}
-                className="flex items-center space-x-2 px-4 py-2 bg-red-900/30 border border-red-700/50 hover:bg-red-900/50 text-red-400 rounded transition-colors text-sm"
-            >
-                <Trash2 size={16} />
-                <span>Trọng Sinh (Xóa Data)</span>
-            </button>
        </div>
 
        {/* Logs Area */}

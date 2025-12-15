@@ -7,6 +7,13 @@ const ExplorationPanel: React.FC = () => {
   const realm = getCurrentRealm();
 
   const hpPercent = (state.hp / state.maxHp) * 100;
+  const isMortal = state.realmIndex === 0;
+
+  const getButtonLabel = () => {
+      if (isMortal) return "Cần Luyện Khí Tầng 1";
+      if (state.hp < state.maxHp * 0.2) return "Cần Hồi Phục...";
+      return "Xuất Sơn Du Ngoạn";
+  };
 
   return (
     <div className="p-4 md:p-8 h-full flex flex-col space-y-6">
@@ -40,7 +47,7 @@ const ExplorationPanel: React.FC = () => {
       </div>
 
       {/* Main Action */}
-      <div className="flex justify-center">
+      <div className="flex justify-center flex-col items-center">
         {state.isExploring ? (
             <button 
                 onClick={() => dispatch({ type: 'STOP_EXPLORATION' })}
@@ -49,13 +56,18 @@ const ExplorationPanel: React.FC = () => {
                 Thu Về Động Phủ
             </button>
         ) : (
-            <button 
-                onClick={() => dispatch({ type: 'START_EXPLORATION' })}
-                disabled={state.hp < state.maxHp * 0.2}
-                className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white px-8 py-3 rounded-lg font-bold shadow-lg transition-all w-full max-w-sm"
-            >
-                {state.hp < state.maxHp * 0.2 ? "Cần Hồi Phục..." : "Xuất Sơn Du Ngoạn"}
-            </button>
+            <>
+                <button 
+                    onClick={() => dispatch({ type: 'START_EXPLORATION' })}
+                    disabled={(state.hp < state.maxHp * 0.2) || isMortal}
+                    className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white px-8 py-3 rounded-lg font-bold shadow-lg transition-all w-full max-w-sm"
+                >
+                    {getButtonLabel()}
+                </button>
+                {isMortal && (
+                    <p className="text-xs text-red-400 mt-2 italic">Phàm nhân chưa bước vào tiên lộ không thể chịu nổi yêu thú bên ngoài.</p>
+                )}
+            </>
         )}
       </div>
 
