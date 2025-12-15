@@ -62,4 +62,5 @@ export type GameAction =
   | { type: 'CRAFT_ITEM'; payload: { itemId: string; cost: Partial<Resources> } }
   | { type: 'USE_ITEM'; payload: string }
   | { type: 'ADD_LOG'; payload: Omit<LogEntry, 'id' | 'timestamp'> }
-  | { type: 'SET_PLAYER_NAME'; payload: string };
+  | { type: 'SET_PLAYER_NAME'; payload: string }
+  | { type: 'LOAD_GAME'; payload: GameState };

@@ -230,6 +230,16 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
     case 'SET_PLAYER_NAME':
         return { ...state, playerName: action.payload };
 
+    case 'LOAD_GAME':
+        // Merge loaded state with INITIAL_STATE to ensure new fields are present if version changed
+        return {
+            ...INITIAL_STATE,
+            ...action.payload,
+            // Ensure runtime flags are reset
+            lastTick: Date.now(),
+            isExploring: false // Stop exploring on load to be safe
+        };
+
     default:
       return state;
   }
@@ -243,6 +253,7 @@ interface GameContextType {
   getCurrentRealm: () => Realm;
   saveGame: () => void;
   resetGame: () => void;
+  importSave: (data: string) => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -266,7 +277,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Ref to hold state for setInterval/EventListener without causing re-renders/resets
   const stateRef = useRef(state);
-  // NEW: Ref to signal that we are resetting data, so STOP SAVING
+  // Ref to signal that we are resetting data, so STOP SAVING
   const isResettingRef = useRef(false);
 
   // Update ref whenever state changes
@@ -293,14 +304,34 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
   }, []);
 
-  // NEW: Robust Reset Function
+  // Robust Reset Function
   const resetGame = useCallback(() => {
       isResettingRef.current = true; // Lock saving mechanism
       localStorage.removeItem('cuu-gioi-bat-hu-save');
       window.location.reload();
   }, []);
 
-  // Auto-Save Logic (FIXED: Uses stateRef to prevent interval clearing)
+  // NEW: Safe Import Function (Hot Load - No Reload)
+  const importSave = useCallback((data: string) => {
+      try {
+          const parsed = JSON.parse(data);
+          
+          // 1. Dispatch action to update state immediately in memory
+          dispatch({ type: 'LOAD_GAME', payload: parsed });
+          
+          // 2. Force write to localStorage immediately (overwriting old data)
+          localStorage.setItem('cuu-gioi-bat-hu-save', data);
+          
+          // Note: We DO NOT call window.location.reload() anymore. 
+          // This prevents the 'beforeunload' event from triggering the auto-save 
+          // which was causing the race condition.
+          
+      } catch(e) {
+          alert("Lỗi khi nạp dữ liệu: " + e);
+      }
+  }, []);
+
+  // Auto-Save Logic
   useEffect(() => {
       const handleSave = () => {
           if (isResettingRef.current) return; // Crucial check!
@@ -315,16 +346,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return () => {
           clearInterval(saveInterval);
           window.removeEventListener('beforeunload', handleSave);
-          handleSave(); // Save one last time on unmount
+          // Only save on unmount if we are NOT resetting/importing via reload
+          if (!isResettingRef.current) {
+             handleSave(); 
+          }
       };
-  }, []); // Empty dependency array = interval runs consistently
+  }, []);
 
   const getCurrentRealm = useCallback(() => {
       return REALMS[state.realmIndex];
   }, [state.realmIndex]);
 
   return (
-    <GameContext.Provider value={{ state, dispatch, getCurrentRealm, saveGame, resetGame }}>
+    <GameContext.Provider value={{ state, dispatch, getCurrentRealm, saveGame, resetGame, importSave }}>
       {children}
     </GameContext.Provider>
   );

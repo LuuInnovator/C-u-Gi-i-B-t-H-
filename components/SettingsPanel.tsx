@@ -3,7 +3,7 @@ import { useGame } from '../context/GameContext';
 import { ScrollText, Trash2, Save, Download, Upload } from 'lucide-react';
 
 const SettingsPanel: React.FC = () => {
-  const { state, saveGame, resetGame } = useGame();
+  const { state, saveGame, resetGame, importSave } = useGame();
   const [saveStatus, setSaveStatus] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -20,17 +20,36 @@ const SettingsPanel: React.FC = () => {
       setTimeout(() => setSaveStatus(''), 2000);
   };
 
-  // Export Save File
+  // Export Save File (Fixed with Blob for better Mobile/PC compatibility)
   const handleExport = () => {
-      const dataStr = JSON.stringify(state);
-      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-      
-      const exportFileDefaultName = `CuuGioiBatHu_Save_${new Date().toISOString().slice(0,10)}.json`;
-      
-      const linkElement = document.createElement('a');
-      linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', exportFileDefaultName);
-      linkElement.click();
+      try {
+          // 1. Convert state to formatted JSON string
+          const dataStr = JSON.stringify(state, null, 2);
+          
+          // 2. Create a Blob (Binary Large Object) - safer than Data URI
+          const blob = new Blob([dataStr], { type: 'application/json' });
+          
+          // 3. Create a temporary URL for the Blob
+          const url = URL.createObjectURL(blob);
+          
+          // 4. Create download link and trigger click
+          const linkElement = document.createElement('a');
+          linkElement.href = url;
+          linkElement.download = `CuuGioiBatHu_Save_${state.playerName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.json`;
+          
+          // Append to body is required for some browsers (Firefox/Mobile)
+          document.body.appendChild(linkElement);
+          linkElement.click();
+          
+          // 5. Cleanup
+          document.body.removeChild(linkElement);
+          URL.revokeObjectURL(url);
+          
+          setSaveStatus('Đã xuất file!');
+          setTimeout(() => setSaveStatus(''), 2000);
+      } catch (e) {
+          alert("Lỗi khi xuất file: " + e);
+      }
   };
 
   // Import Save File
@@ -48,16 +67,20 @@ const SettingsPanel: React.FC = () => {
               const jsonStr = e.target?.result as string;
               // Basic validation check
               const parsed = JSON.parse(jsonStr);
-              if (!parsed.resources || !parsed.playerName) {
-                  throw new Error("File không hợp lệ");
+              
+              // Validate critical fields
+              if (!parsed.resources || !parsed.playerName || typeof parsed.realmIndex === 'undefined') {
+                  throw new Error("Cấu trúc file không hợp lệ (thiếu resources hoặc playerName)");
               }
 
-              if (window.confirm("Bạn có chắc chắn muốn nạp dữ liệu từ file này? Dữ liệu hiện tại sẽ bị ghi đè.")) {
-                  localStorage.setItem('cuu-gioi-bat-hu-save', jsonStr);
-                  window.location.reload();
+              if (window.confirm(`Tìm thấy dữ liệu của: ${parsed.playerName} (Cảnh giới: Lv.${parsed.realmIndex}).\nBạn có muốn nạp dữ liệu này không?`)) {
+                  // Use the safe import function from context (Hot Load)
+                  importSave(jsonStr);
+                  alert(`Chào mừng đạo hữu ${parsed.playerName} quay trở lại!`);
               }
           } catch (err) {
-              alert("Lỗi: File lưu trữ bị hỏng hoặc không đúng định dạng.");
+              console.error(err);
+              alert("Lỗi: File lưu trữ bị hỏng, sai định dạng hoặc không phải file JSON của game.");
           }
       };
       reader.readAsText(fileObj);
@@ -77,9 +100,10 @@ const SettingsPanel: React.FC = () => {
        {/* Game Info / Actions */}
        <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-col gap-6">
             <div className="text-sm text-slate-400 border-b border-slate-700 pb-4">
-                <p>Đạo Hiệu: <span className="text-jade-400 font-bold text-lg">{state.playerName}</span></p>
-                <p>Phiên bản: <span className="text-slate-500">Alpha 1.0.6 (Fix Reset)</span></p>
-                <p className="mt-2 text-xs text-slate-500 italic">Dữ liệu được lưu tại trình duyệt này.</p>
+                <div className="flex justify-between items-center mb-2">
+                    <p>Đạo Hiệu: <span className="text-jade-400 font-bold text-lg">{state.playerName}</span></p>
+                    <span className="text-xs bg-slate-900 px-2 py-1 rounded text-slate-500">v1.1.0</span>
+                </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -122,7 +146,7 @@ const SettingsPanel: React.FC = () => {
                     type="file" 
                     ref={fileInputRef} 
                     onChange={handleFileChange} 
-                    accept=".json" 
+                    accept=".json,application/json" 
                     className="hidden" 
                 />
             </div>
