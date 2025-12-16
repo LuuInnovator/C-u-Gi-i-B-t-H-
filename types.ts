@@ -84,7 +84,7 @@ export interface ItemStats {
   effectDescription?: string;
 }
 
-// --- HỆ THỐNG KỸ NĂNG (MỚI) ---
+// --- HỆ THỐNG KỸ NĂNG ---
 export type SkillType = 'buff_def' | 'buff_atk' | 'heal' | 'dmg_burst';
 
 export interface ActiveSkill {
@@ -157,7 +157,7 @@ export interface StatBonuses {
     hp: number;
 }
 
-// --- STATE QUẢN LÝ BUFF & COOLDOWN (MỚI) ---
+// --- STATE QUẢN LÝ BUFF & COOLDOWN ---
 export interface ActiveBuff {
     id: string; // skill id
     name: string;
@@ -168,6 +168,7 @@ export interface ActiveBuff {
 
 export interface GameState {
   playerName: string;
+  avatarUrl?: string; // URL ảnh đại diện nhân vật
   cultivationPath: CultivationPath;
   sectId: string | null; 
   resources: Resources;
@@ -192,9 +193,15 @@ export interface GameState {
   weaknessEndTime: number;
   statBonuses: StatBonuses; 
   
-  // Tính năng mới
-  skillCooldowns: Record<string, number>; // Map skillId -> timestamp available
+  skillCooldowns: Record<string, number>;
   activeBuffs: ActiveBuff[];
+
+  // Anti-Cheat / Rate Limiting
+  lastClickTime: number;
+  
+  // Renaming System
+  nameChangeCount: number;
+  lastNameChangeTime: number;
 }
 
 export type GameAction =
@@ -212,10 +219,12 @@ export type GameAction =
   | { type: 'SELL_ITEM'; payload: { itemId: string; amount: number } } 
   | { type: 'ADD_LOG'; payload: Omit<LogEntry, 'id' | 'timestamp'> }
   | { type: 'SET_PLAYER_NAME'; payload: string }
+  | { type: 'RENAME_CHARACTER'; payload: string } // Action đổi tên
+  | { type: 'SET_AVATAR'; payload: string } 
   | { type: 'CHOOSE_PATH'; payload: CultivationPath } 
   | { type: 'JOIN_SECT'; payload: string } 
   | { type: 'LEAVE_SECT' }
   | { type: 'TRIGGER_ENCOUNTER'; payload: string } 
   | { type: 'RESOLVE_ENCOUNTER'; payload: { encounterId: string; optionIndex: number } }
   | { type: 'LOAD_GAME'; payload: GameState }
-  | { type: 'ACTIVATE_SKILL'; payload: string }; // Payload là Skill ID
+  | { type: 'ACTIVATE_SKILL'; payload: string };

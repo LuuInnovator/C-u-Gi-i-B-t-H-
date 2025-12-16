@@ -10,6 +10,15 @@ export const GAME_ITEMS: Item[] = [
   },
   { id: 'pill_breakthrough', name: 'Trúc Cơ Đan', description: '+20% Tỷ lệ đột phá.', quantity: 1, type: 'consumable', price: 500, rarity: 'uncommon' },
   { id: 'pill_protection', name: 'Hộ Mệnh Đan', description: 'Chống One-Hit trong 5 phút.', quantity: 1, type: 'consumable', price: 1500, rarity: 'rare' },
+  
+  // VẬT PHẨM ĐẶC BIỆT
+  { 
+      id: 'rename_scroll', 
+      name: 'Phù Lục Cải Mệnh', 
+      description: 'Vật phẩm ẩn chứa thiên cơ, dùng để thay đổi Đạo Hiệu (Tên nhân vật).', 
+      quantity: 1, type: 'consumable', price: 5000, rarity: 'epic' 
+  },
+
   { id: 'ore_iron', name: 'Quặng Thiết', description: 'Nguyên liệu chế tạo cơ bản.', quantity: 1, type: 'material', price: 10, rarity: 'common' },
   { id: 'wood_spirit', name: 'Gỗ Linh Mộc', description: 'Gỗ chứa linh khí.', quantity: 1, type: 'material', price: 20, rarity: 'common' },
   { id: 'ore_fire', name: 'Hỏa Tinh Thạch', description: 'Đá nóng bỏng tay.', quantity: 1, type: 'material', price: 50, rarity: 'uncommon' },

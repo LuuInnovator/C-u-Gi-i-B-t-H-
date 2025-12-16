@@ -11,6 +11,7 @@ export * from './data/encounters';
 // Khởi tạo trạng thái ban đầu của game
 export const INITIAL_STATE: GameState = {
   playerName: 'Đạo Hữu Vô Danh',
+  avatarUrl: undefined, // Mặc định chưa có ảnh
   cultivationPath: 'none',
   sectId: null,
   resources: {
@@ -51,5 +52,12 @@ export const INITIAL_STATE: GameState = {
   },
   // Khởi tạo hệ thống kỹ năng
   skillCooldowns: {},
-  activeBuffs: []
+  activeBuffs: [],
+  
+  // Rate limiting click
+  lastClickTime: 0,
+
+  // Renaming
+  nameChangeCount: 0,
+  lastNameChangeTime: 0
 };

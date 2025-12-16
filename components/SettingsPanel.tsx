@@ -1,10 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { useGame } from '../context/GameContext';
-import { ScrollText, Trash2, Save, Download, Upload } from 'lucide-react';
+import { ScrollText, Trash2, Save, Download, Upload, Edit, Clock, Ticket } from 'lucide-react';
 
 const SettingsPanel: React.FC = () => {
-  const { state, saveGame, resetGame, importSave } = useGame();
+  const { state, dispatch, saveGame, resetGame, importSave } = useGame();
   const [saveStatus, setSaveStatus] = useState<string>('');
+  const [newName, setNewName] = useState('');
+  const [isRenaming, setIsRenaming] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleReset = () => {
@@ -87,6 +89,32 @@ const SettingsPanel: React.FC = () => {
       event.target.value = '';
   };
 
+  // --- LOGIC ĐỔI TÊN ---
+  const RENAME_COOLDOWN = 7 * 24 * 60 * 60 * 1000;
+  const timeSinceLastRename = Date.now() - (state.lastNameChangeTime || 0);
+  const canRenameTime = state.nameChangeCount === 0 || timeSinceLastRename >= RENAME_COOLDOWN;
+  const daysLeft = Math.ceil((RENAME_COOLDOWN - timeSinceLastRename) / (24 * 60 * 60 * 1000));
+  
+  const hasScroll = state.inventory.some(i => i.id === 'rename_scroll');
+  const isFree = state.nameChangeCount === 0;
+
+  const handleRename = () => {
+      if (!newName.trim()) return;
+      if (newName.length > 18) {
+          alert("Đạo hiệu quá dài! Tối đa 18 ký tự.");
+          return;
+      }
+      
+      if (!isFree && !hasScroll) {
+          alert("Cần có Phù Lục Cải Mệnh để đổi tên!");
+          return;
+      }
+
+      dispatch({ type: 'RENAME_CHARACTER', payload: newName.trim() });
+      setNewName('');
+      setIsRenaming(false);
+  };
+
   return (
     <div className="p-4 md:p-8 h-full flex flex-col space-y-6">
        {/* Tiêu đề */}
@@ -102,6 +130,71 @@ const SettingsPanel: React.FC = () => {
                 <div className="flex justify-between items-center mb-2">
                     <p>Đạo Hiệu: <span className="text-jade-400 font-bold text-lg">{state.playerName}</span></p>
                     <span className="text-xs bg-slate-900 px-2 py-1 rounded text-slate-500">v1.1.0</span>
+                </div>
+
+                {/* Khu vực Đổi tên */}
+                <div className="mt-4 bg-black/20 p-3 rounded border border-slate-700/50">
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="font-bold text-slate-300 flex items-center gap-2">
+                            <Edit size={14}/> Cải Danh (Đổi Tên)
+                        </span>
+                        {state.nameChangeCount > 0 && (
+                            <span className="text-[10px] text-slate-500">Đã đổi: {state.nameChangeCount} lần</span>
+                        )}
+                    </div>
+                    
+                    {!canRenameTime ? (
+                        <div className="text-xs text-orange-400 flex items-center gap-2 bg-orange-900/10 p-2 rounded">
+                            <Clock size={12} /> Cần chờ {daysLeft} ngày nữa để đổi tên tiếp.
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-2">
+                            {isRenaming ? (
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="text" 
+                                        value={newName}
+                                        onChange={(e) => setNewName(e.target.value)}
+                                        placeholder="Nhập Đạo Hiệu mới..."
+                                        maxLength={18}
+                                        className="flex-1 bg-slate-900 border border-slate-600 rounded px-3 py-1 text-sm text-white focus:outline-none focus:border-spirit-gold"
+                                    />
+                                    <button 
+                                        onClick={handleRename}
+                                        disabled={!isFree && !hasScroll}
+                                        className={`px-3 py-1 rounded text-xs font-bold whitespace-nowrap
+                                            ${(isFree || hasScroll) ? 'bg-jade-600 hover:bg-jade-500 text-white' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}
+                                    >
+                                        Xác Nhận
+                                    </button>
+                                    <button onClick={() => setIsRenaming(false)} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-xs text-slate-300">Hủy</button>
+                                </div>
+                            ) : (
+                                <div className="flex justify-between items-center">
+                                    <div className="text-xs">
+                                        {isFree ? (
+                                            <span className="text-green-400 font-bold">Lần đầu: Miễn Phí</span>
+                                        ) : (
+                                            <span className={hasScroll ? "text-green-400" : "text-red-400"}>
+                                                Yêu cầu: 1x Phù Lục Cải Mệnh {hasScroll ? '(Đã có)' : '(Chưa có)'}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <button 
+                                        onClick={() => setIsRenaming(true)} 
+                                        className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-white border border-slate-600"
+                                    >
+                                        Đổi Tên
+                                    </button>
+                                </div>
+                            )}
+                            {!isFree && !hasScroll && isRenaming && (
+                                <p className="text-[10px] text-slate-500 italic">
+                                    *Phù Lục Cải Mệnh có thể mua tại Thương Hội (Giá 5000 Linh Thạch).
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
             
@@ -121,7 +214,7 @@ const SettingsPanel: React.FC = () => {
                     className="flex items-center justify-center space-x-2 px-4 py-3 bg-red-900/30 border border-red-700/50 hover:bg-red-900/50 text-red-400 rounded transition-colors text-sm font-bold"
                 >
                     <Trash2 size={18} />
-                    <span>Trọng Sinh (Xóa Data)</span>
+                    <span>Xóa Data</span>
                 </button>
 
                 {/* Xuất Data */}

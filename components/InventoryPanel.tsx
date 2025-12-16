@@ -1,6 +1,6 @@
 import React from 'react';
 import { useGame } from '../context/GameContext';
-import { Package, Heart, Zap, Swords } from 'lucide-react';
+import { Package, Heart, Zap, Swords, Coins, Leaf, Mountain } from 'lucide-react';
 
 const InventoryPanel: React.FC = () => {
   const { state, dispatch } = useGame();
@@ -14,6 +14,39 @@ const InventoryPanel: React.FC = () => {
            <span className="ml-auto text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded">
                {state.inventory.length} vật phẩm
            </span>
+      </div>
+
+      {/* Hiển thị Tài Nguyên Chính */}
+      <div className="grid grid-cols-3 gap-2 md:gap-4 mb-6">
+            <div className="bg-slate-800 p-3 rounded-lg border border-slate-700 flex flex-col md:flex-row items-center justify-center md:justify-start gap-2 shadow-sm">
+                <div className="bg-spirit-gold/20 p-2 rounded-full">
+                    <Coins size={16} className="text-spirit-gold" />
+                </div>
+                <div className="text-center md:text-left">
+                    <div className="text-[10px] text-slate-400 uppercase">Linh Thạch</div>
+                    <div className="text-sm font-bold text-slate-200">{state.resources.spiritStones.toLocaleString()}</div>
+                </div>
+            </div>
+
+            <div className="bg-slate-800 p-3 rounded-lg border border-slate-700 flex flex-col md:flex-row items-center justify-center md:justify-start gap-2 shadow-sm">
+                <div className="bg-green-500/20 p-2 rounded-full">
+                    <Leaf size={16} className="text-green-500" />
+                </div>
+                <div className="text-center md:text-left">
+                    <div className="text-[10px] text-slate-400 uppercase">Linh Thảo</div>
+                    <div className="text-sm font-bold text-slate-200">{state.resources.herbs.toLocaleString()}</div>
+                </div>
+            </div>
+
+            <div className="bg-slate-800 p-3 rounded-lg border border-slate-700 flex flex-col md:flex-row items-center justify-center md:justify-start gap-2 shadow-sm">
+                <div className="bg-slate-500/20 p-2 rounded-full">
+                    <Mountain size={16} className="text-slate-400" />
+                </div>
+                <div className="text-center md:text-left">
+                    <div className="text-[10px] text-slate-500 uppercase">Khoáng Thạch</div>
+                    <div className="text-sm font-bold text-slate-200">{state.resources.ores.toLocaleString()}</div>
+                </div>
+            </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">

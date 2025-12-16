@@ -1,6 +1,6 @@
 import React from 'react';
 import { useGame } from '../context/GameContext';
-import { Shield, Swords, Sparkles, X, Heart, Zap, User, Skull, Droplets, Flame, Mountain, Eye, Moon, Pill, Lock } from 'lucide-react';
+import { Shield, Swords, Sparkles, X, Heart, Zap, User, Skull, Droplets, Flame, Mountain, Eye, Moon, Pill, Lock, Edit2 } from 'lucide-react';
 import { EquipmentSlot, ElementType, ItemStats } from '../types';
 
 const CharacterPanel: React.FC = () => {
@@ -44,6 +44,13 @@ const CharacterPanel: React.FC = () => {
   const fireRes = getStatSum('fireRes') + getStatSum('allRes');
   const poisonRes = getStatSum('poisonRes') + getStatSum('allRes');
   const mentalRes = getStatSum('mentalRes') + getStatSum('allRes');
+
+  const handleEditAvatar = () => {
+      const url = prompt("Nhập đường dẫn ảnh (URL) cho nhân vật của bạn:", state.avatarUrl || "");
+      if (url !== null) {
+          dispatch({ type: 'SET_AVATAR', payload: url });
+      }
+  };
 
   const renderEquippedItem = (slot: EquipmentSlot, icon: React.ReactNode, label: string, locked: boolean = false) => {
       const item = state.equippedItems[slot];
@@ -109,12 +116,24 @@ const CharacterPanel: React.FC = () => {
         {/* Left Column: Avatar & Equipment */}
         <div className="w-full md:w-1/3 flex flex-col gap-6">
              <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col items-center">
-                 {/* Avatar Placeholder */}
-                 <div className="w-32 h-32 rounded-full bg-gradient-to-br from-slate-700 to-ink-900 border-4 border-slate-600 flex items-center justify-center mb-4 shadow-inner relative">
-                      <User size={64} className="text-slate-500" />
-                      {/* Path Badge */}
-                      {state.cultivationPath !== 'none' && (
-                          <div className={`absolute bottom-0 right-0 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-ink-900 ${state.cultivationPath === 'devil' ? 'text-red-500 border-red-500' : 'text-indigo-400 border-indigo-400'}`}>
+                 {/* Avatar Area */}
+                 <div className="relative group cursor-pointer" onClick={handleEditAvatar} title="Nhấp để đổi ảnh">
+                     <div className="w-32 h-32 rounded-full bg-gradient-to-br from-slate-700 to-ink-900 border-4 border-slate-600 flex items-center justify-center mb-4 shadow-inner relative overflow-hidden">
+                          {state.avatarUrl ? (
+                              <img src={state.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                          ) : (
+                              <User size={64} className="text-slate-500" />
+                          )}
+
+                          {/* Hover Edit Overlay */}
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Edit2 size={24} className="text-white" />
+                          </div>
+                     </div>
+                     
+                     {/* Path Badge - Moved to top-left */}
+                     {state.cultivationPath !== 'none' && (
+                          <div className={`absolute top-0 left-0 -mt-1 -ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-ink-900 z-10 shadow-lg ${state.cultivationPath === 'devil' ? 'text-red-500 border-red-500' : 'text-indigo-400 border-indigo-400'}`}>
                               {state.cultivationPath === 'devil' ? 'Ma Đạo' : 'Chính Đạo'}
                           </div>
                       )}

@@ -41,6 +41,8 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
   if (!state.statBonuses) state.statBonuses = { attack: 5, defense: 2, hp: 100 };
   if (!state.skillCooldowns) state.skillCooldowns = {};
   if (!state.activeBuffs) state.activeBuffs = [];
+  if (state.nameChangeCount === undefined) state.nameChangeCount = 0;
+  if (state.lastNameChangeTime === undefined) state.lastNameChangeTime = 0;
 
   switch (action.type) {
     case 'TICK': {
@@ -176,15 +178,11 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
             }
 
             // Phạt chênh lệch cấp độ (Cực mạnh)
-            // Cứ mỗi 1 level chênh lệch, quái mạnh lên 50%
             const gapStatsMultiplier = 1 + (levelGap * 0.5); 
-            
-            // Tỷ lệ đánh hụt khi vượt cấp (Mỗi cấp -10% chính xác)
             const gapHitPenalty = levelGap * 0.10; 
 
             const randomizedAtk = Math.floor(baseMonsterAtkVal * explorationNerf * (0.8 + Math.random() * 0.4));
             
-            // Áp dụng multiplier chênh lệch
             const monsterAttack = Math.max(1, randomizedAtk * difficultyMod * gapStatsMultiplier);
             const monsterDefense = Math.floor(baseMonsterDefVal * explorationNerf * difficultyMod * gapStatsMultiplier);
 
@@ -201,7 +199,6 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
             const effectiveSpi = applyDiminishingReturns(totalSpi);
 
             const basePlayerAtkVal = 5; 
-            // CỘNG BUFF TẤN CÔNG
             const playerBaseDmg = (basePlayerAtkVal + (weaponStats.attack || 0) + effectiveStr + (state.statBonuses.attack || 0) + buffAtk);
             
             const playerSpiritDmg = (basePlayerAtkVal * 1.5) + effectiveSpi + (state.resources.qi / spiritScaling);
@@ -224,10 +221,10 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
             totalPlayerAtk *= elementMult;
             
             // Giảm sát thương gây ra nếu chênh lệch cấp
-            const gapDmgOutputPenalty = Math.min(0.9, levelGap * 0.2); // Mỗi cấp giảm 20% sát thương gây ra
+            const gapDmgOutputPenalty = Math.min(0.9, levelGap * 0.2); 
             totalPlayerAtk *= (1.0 - gapDmgOutputPenalty);
 
-            if (Math.random() < gapHitPenalty) totalPlayerAtk = 0; // Đánh trượt do chênh lệch
+            if (Math.random() < gapHitPenalty) totalPlayerAtk = 0; 
 
             const monsterEstHP = monsterDefense * 15; 
             const killSpeedFactor = totalPlayerAtk > 0 ? Math.min(1.0, totalPlayerAtk / monsterEstHP) : 0; 
@@ -240,8 +237,6 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
             playerPhysDef += (state.equippedItems.armor?.stats?.defense || 0);
             
             playerPhysDef += (state.statBonuses.defense || 0);
-            
-            // CỘNG BUFF PHÒNG THỦ
             playerPhysDef += buffDef;
 
             if (state.cultivationPath === 'righteous') playerPhysDef *= RIGHTEOUS_DEF_BONUS;
@@ -278,21 +273,18 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
 
                 // --- XỬ LÝ HỘ MỆNH ĐAN VÀ MIỂU SÁT ---
                 const protectionActive = state.protectionEndTime > now;
-                const damageCap = newState.maxHp * 0.4; // Mặc định không quá 40% máu 1 hit
+                const damageCap = newState.maxHp * 0.4; 
 
                 if (protectionActive) {
                     if (levelGap > 3) {
-                        // Nếu chênh lệch quá lớn (> 3 cấp), Hộ Mệnh Đan vô dụng
-                        if (Math.random() < 0.3) { // 30% tỷ lệ hiện log cảnh báo mỗi hit
+                        if (Math.random() < 0.3) { 
                             newLogs = [{ 
                                 id: Date.now(), timestamp: Date.now(), type: 'danger', 
                                 message: `⚠️ CẢNH GIỚI QUÁ THẤP! Hộ Mệnh Đan vỡ vụn trước sức mạnh tuyệt đối!` 
                             }, ...newLogs];
                         }
-                        // Sát thương nhân đôi, không có cap -> Miểu sát
                         totalDamageTaken = totalDamageTaken * 2;
                     } else {
-                        // Chênh lệch chấp nhận được, Hộ Mệnh Đan hoạt động
                         if (totalDamageTaken > damageCap) totalDamageTaken = damageCap;
                     }
                 }
@@ -301,7 +293,6 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
 
                 // --- LOOT DROPS ---
                 if (activeDungeon && activeDungeon.lootTable) {
-                    // Nếu vượt cấp thành công, tăng tỷ lệ rơi đồ
                     const gapLootBonus = levelGap > 0 ? 1.0 + (levelGap * 0.1) : 1.0;
                     const dropMod = activeDungeon.dropRateMod * (state.cultivationPath === 'devil' ? 1.2 : 1.0) * gapLootBonus;
                     
@@ -372,7 +363,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       return newState;
     }
 
-    // --- 6. XỬ LÝ KÍCH HOẠT KỸ NĂNG (MỚI) ---
+    // --- 6. XỬ LÝ KÍCH HOẠT KỸ NĂNG ---
     case 'ACTIVATE_SKILL': {
         const skillId = action.payload;
         
@@ -424,8 +415,15 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
         return newState;
     }
 
-    // Các case khác giữ nguyên...
     case 'GATHER_QI': {
+      // --- CẬP NHẬT: Rate Limiting (Chống Auto-Click) ---
+      // Giới hạn 8 click/giây ~ 125ms mỗi click
+      const CLICK_COOLDOWN = 125; 
+      if (now - state.lastClickTime < CLICK_COOLDOWN) {
+          // Bỏ qua click này nếu quá nhanh
+          return state;
+      }
+
       let clickMultiplier = state.clickMultiplier;
       if (state.cultivationPath === 'devil') clickMultiplier *= DEVIL_CLICK_BONUS;
       if (state.sectId === 'van_kiem') clickMultiplier *= 1.2;
@@ -434,7 +432,60 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       const gain = ((1 + currentRealm.baseQiGeneration) * clickMultiplier) + artifactClickBonus;
       let newQi = state.resources.qi + gain;
       if (newQi > currentRealm.maxQiCap) newQi = currentRealm.maxQiCap;
-      return { ...state, resources: { ...state.resources, qi: newQi } };
+      
+      return { 
+          ...state, 
+          lastClickTime: now, // Cập nhật thời gian click
+          resources: { ...state.resources, qi: newQi } 
+      };
+    }
+
+    case 'SET_PLAYER_NAME': return { ...state, playerName: action.payload };
+    case 'SET_AVATAR': return { ...state, avatarUrl: action.payload };
+    
+    case 'RENAME_CHARACTER': {
+        const newName = action.payload;
+        if (!newName || newName.trim().length === 0) return state;
+
+        const RENAME_COOLDOWN = 7 * 24 * 60 * 60 * 1000; // 7 ngày
+        const timeSinceLast = now - (state.lastNameChangeTime || 0);
+
+        if (state.nameChangeCount > 0 && timeSinceLast < RENAME_COOLDOWN) {
+             const daysLeft = Math.ceil((RENAME_COOLDOWN - timeSinceLast) / (24 * 60 * 60 * 1000));
+             return { ...state, logs: [{ id: now, timestamp: now, type: 'warning', message: `Chưa thể đổi tên. Vui lòng đợi ${daysLeft} ngày nữa.` }, ...state.logs] };
+        }
+
+        let newState = { ...state };
+        let logMsg = '';
+
+        if (state.nameChangeCount === 0) {
+            // Lần đầu miễn phí
+            logMsg = `Cải danh thành công! Đạo hiệu mới: ${newName} (Lần đầu miễn phí)`;
+        } else {
+            // Các lần sau cần item
+            const scrollIdx = state.inventory.findIndex(i => i.id === 'rename_scroll');
+            if (scrollIdx === -1) {
+                return { ...state, logs: [{ id: now, timestamp: now, type: 'warning', message: `Cần "Phù Lục Cải Mệnh" để đổi tên lần thứ ${state.nameChangeCount + 1}.` }, ...state.logs] };
+            }
+
+            // Consume Scroll
+            let newInv = [...state.inventory];
+            if (newInv[scrollIdx].quantity > 1) {
+                newInv[scrollIdx].quantity -= 1;
+            } else {
+                newInv.splice(scrollIdx, 1);
+            }
+            newState.inventory = newInv;
+            logMsg = `Đã dùng Phù Lục Cải Mệnh. Cải danh thành công: ${newName}`;
+        }
+
+        return {
+            ...newState,
+            playerName: newName,
+            nameChangeCount: state.nameChangeCount + 1,
+            lastNameChangeTime: now,
+            logs: [{ id: now, timestamp: now, type: 'success', message: logMsg }, ...state.logs]
+        };
     }
 
     case 'ATTEMPT_BREAKTHROUGH': {
@@ -480,7 +531,6 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
 
     case 'START_DUNGEON': {
       const dungeon = SECRET_REALMS.find(d => d.id === action.payload);
-      // Cập nhật: Cho phép vào dungeon cấp cao, nhưng cảnh báo
       if (!dungeon) return state;
       
       let logs = [...state.logs];
@@ -568,6 +618,13 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
             newState.protectionEndTime = Date.now() + 300000;
             logMsg = 'Đã dùng Hộ Mệnh Đan (Bảo hộ 5 phút)';
         }
+        else if (item.id === 'rename_scroll') {
+            // Không làm gì cả, vật phẩm này dùng thông qua giao diện Đổi tên
+            logMsg = 'Hãy dùng vật phẩm này trong phần Thiết Lập -> Đổi Tên';
+             // Hoàn lại item vì chưa dùng đúng cách
+             if (idx >= 0) newInv[idx].quantity += 1; else newInv.push({ ...item, quantity: 1 });
+             newState.inventory = newInv;
+        }
         else if (item.id === 'pill_attack_permanent') {
             newState.statBonuses = { ...newState.statBonuses, attack: (newState.statBonuses.attack || 0) + 2 };
             logMsg = 'Cơ thể cường tráng! (+2 Tấn Công)';
@@ -611,7 +668,6 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
         return { ...state, inventory: newInv, equippedItems: { ...state.equippedItems, [action.payload]: null } };
     }
 
-    case 'SET_PLAYER_NAME': return { ...state, playerName: action.payload };
     case 'CHOOSE_PATH': return { ...state, cultivationPath: action.payload };
     case 'JOIN_SECT': return { ...state, sectId: action.payload };
     case 'LEAVE_SECT': return { ...state, sectId: null, traitorDebuffEndTime: Date.now() + 5400000 };

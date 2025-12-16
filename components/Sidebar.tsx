@@ -10,10 +10,9 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const { state } = useGame();
   
-  // Logic Cảnh Giới Mở Khóa Tính Năng (Feature Gates)
-  // Luyện Khí (0-5): Cơ bản
-  // Trúc Cơ (6-8): Mở Chế Tạo (Alchemy), Tông Môn, Chợ
-  const isFoundation = state.realmIndex >= 6; // Level 6 = Trúc Cơ Sơ Kỳ
+  // Logic Điều kiện mở khóa tính năng
+  const isQiCondensation1 = state.realmIndex >= 1; // Level 1 = Luyện Khí Tầng 1
+  const isFoundation = state.realmIndex >= 6;      // Level 6 = Trúc Cơ Sơ Kỳ
 
   const menuItems = [
     { id: 'cultivation', label: 'Tu Luyện', icon: Sparkles, locked: false },
@@ -21,9 +20,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     { id: 'inventory', label: 'Túi Đồ', icon: Backpack, locked: false },
     { id: 'exploration', label: 'Du Ngoạn', icon: Mountain, locked: false },
     
-    // Các tính năng bị khóa
-    { id: 'crafting', label: 'Chế Tạo', icon: Hammer, locked: !isFoundation, req: 'Trúc Cơ' },
-    { id: 'market', label: 'Thương Hội', icon: Store, locked: !isFoundation, req: 'Trúc Cơ' },
+    // Thương Hội: Mở ngay từ đầu
+    { id: 'market', label: 'Thương Hội', icon: Store, locked: false },
+
+    // Chế Tạo: Yêu cầu Luyện Khí Tầng 1
+    { id: 'crafting', label: 'Chế Tạo', icon: Hammer, locked: !isQiCondensation1, req: 'Luyện Khí Tầng 1' },
+    
+    // Tông Môn: Yêu cầu Trúc Cơ
     { id: 'sect', label: 'Tông Môn', icon: Swords, locked: !isFoundation, req: 'Trúc Cơ' }, 
     
     { id: 'settings', label: 'Thiết Lập', icon: Settings, locked: false },
@@ -47,7 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                     <div key={item.id} className="flex flex-col md:flex-row items-center justify-center md:justify-start md:space-x-3 p-2 md:px-4 md:py-3 rounded-lg min-w-[60px] md:min-w-0 flex-1 md:flex-none text-slate-700 cursor-not-allowed relative group">
                         <Lock className="w-5 h-5 md:w-6 md:h-6" />
                         <span className="text-[10px] md:text-sm font-medium mt-1 md:mt-0 whitespace-nowrap hidden md:block">{item.label}</span>
-                        {/* Tooltip for locked state */}
+                        {/* Tooltip hiển thị yêu cầu mở khóa */}
                         <div className="absolute left-full ml-2 bg-slate-900 border border-slate-700 text-xs text-slate-400 p-2 rounded whitespace-nowrap hidden md:group-hover:block z-50">
                             Yêu cầu: {item.req}
                         </div>
