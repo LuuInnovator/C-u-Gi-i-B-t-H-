@@ -131,7 +131,7 @@ const SettingsPanel: React.FC = () => {
                     className="flex items-center justify-center space-x-2 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-jade-400 border border-slate-600 rounded transition-colors text-sm font-bold"
                 >
                     <Download size={18} />
-                    <span>Xuất File Lưu (.json)</span>
+                    <span>Xuất File Lưu</span>
                 </button>
 
                 {/* Import Data */}

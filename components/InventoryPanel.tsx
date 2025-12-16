@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { CRAFTABLE_ITEMS } from '../constants';
-import { Package, Hammer, Beaker, Shield, Swords, Sparkles, X } from 'lucide-react';
+import { Package, Hammer, Shield, Swords, Sparkles, X, Heart, Brain, Zap, Flame, Droplets, Mountain } from 'lucide-react';
 import { Item, EquipmentSlot } from '../types';
 
 const InventoryPanel: React.FC = () => {
@@ -19,12 +19,20 @@ const InventoryPanel: React.FC = () => {
                   <p className="text-xs text-slate-500 uppercase">{label}</p>
                   {item ? (
                       <div>
-                          <p className="text-sm font-bold text-spirit-gold">{item.name}</p>
-                          <div className="text-[10px] text-slate-400">
-                             {item.stats?.attack && <span>Công +{item.stats.attack} </span>}
-                             {item.stats?.defense && <span>Thủ +{item.stats.defense} </span>}
-                             {item.stats?.qiRegen && <span>Linh Khí +{item.stats.qiRegen}/s </span>}
+                          <p className={`text-sm font-bold ${item.rarity === 'rare' ? 'text-purple-400' : item.rarity === 'uncommon' ? 'text-blue-400' : 'text-slate-200'}`}>{item.name}</p>
+                          <div className="text-[10px] text-slate-400 grid grid-cols-2 gap-x-2">
+                             {item.stats?.attack && <span>Công:{item.stats.attack}</span>}
+                             {item.stats?.defense && <span>Thủ:{item.stats.defense}</span>}
+                             {item.stats?.constitution && <span className="text-green-400">Thể:{item.stats.constitution}</span>}
+                             {item.stats?.strength && <span className="text-amber-400">Lực:{item.stats.strength}</span>}
+                             {item.stats?.spirit && <span className="text-purple-400">Linh:{item.stats.spirit}</span>}
+                             {item.stats?.physPenetration && <span className="text-pink-400">XuyênVL:{item.stats.physPenetration}%</span>}
+                             {item.stats?.fireRes && <span className="text-red-400">K.Hỏa:{item.stats.fireRes}</span>}
+                             {item.stats?.willpower && <span className="text-blue-300">Ý Chí:{item.stats.willpower}</span>}
                           </div>
+                          {item.stats?.effectDescription && (
+                              <p className="text-[9px] text-yellow-500 mt-1 italic">{item.stats.effectDescription}</p>
+                          )}
                       </div>
                   ) : (
                       <p className="text-sm text-slate-600 italic">Trống</p>
@@ -84,14 +92,16 @@ const InventoryPanel: React.FC = () => {
                     state.inventory.map((item, idx) => (
                         <div key={`${item.id}-${idx}`} className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex justify-between items-start">
                             <div className="flex-1 pr-2">
-                                <h3 className={`font-bold ${item.type === 'equipment' ? 'text-spirit-gold' : 'text-jade-300'}`}>{item.name}</h3>
+                                <h3 className={`font-bold ${item.rarity === 'rare' ? 'text-purple-400' : item.rarity === 'uncommon' ? 'text-blue-400' : 'text-slate-200'}`}>{item.name}</h3>
                                 <p className="text-xs text-slate-400 mt-1">{item.description}</p>
                                 {/* Show Stats for Equipment in Inventory */}
                                 {item.type === 'equipment' && item.stats && (
-                                    <div className="mt-1 flex gap-2 text-[10px] text-indigo-300 bg-indigo-900/20 px-1 py-0.5 rounded w-fit">
-                                        {item.stats.attack && <span>Công: {item.stats.attack}</span>}
-                                        {item.stats.defense && <span>Thủ: {item.stats.defense}</span>}
-                                        {item.stats.qiRegen && <span>Hồi: {item.stats.qiRegen}/s</span>}
+                                    <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-indigo-300 bg-indigo-900/20 px-1 py-0.5 rounded w-fit">
+                                        {item.stats.attack && <span>Công:{item.stats.attack}</span>}
+                                        {item.stats.defense && <span>Thủ:{item.stats.defense}</span>}
+                                        {item.stats.constitution && <span className="text-green-400 flex items-center"><Heart size={8} className="mr-0.5"/>{item.stats.constitution}</span>}
+                                        {item.stats.strength && <span className="text-amber-400 flex items-center"><Swords size={8} className="mr-0.5"/>{item.stats.strength}</span>}
+                                        {item.stats.spirit && <span className="text-purple-400 flex items-center"><Zap size={8} className="mr-0.5"/>{item.stats.spirit}</span>}
                                     </div>
                                 )}
                                 <span className="text-xs bg-slate-900 px-2 py-0.5 rounded mt-2 inline-block text-slate-300">
@@ -136,28 +146,28 @@ const InventoryPanel: React.FC = () => {
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
                     {CRAFTABLE_ITEMS.map((item) => {
                         const canCraft = 
-                            state.resources.herbs >= (item.cost.herbs || 0) &&
-                            state.resources.ores >= (item.cost.ores || 0) &&
-                            state.resources.spiritStones >= (item.cost.spiritStones || 0);
+                            state.resources.herbs >= (item.cost?.herbs || 0) &&
+                            state.resources.ores >= (item.cost?.ores || 0) &&
+                            state.resources.spiritStones >= (item.cost?.spiritStones || 0);
 
                         return (
                             <div key={item.id} className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-col justify-between">
                                 <div>
                                     <div className="flex justify-between items-start">
                                         <h3 className={`font-bold ${item.type === 'equipment' ? 'text-spirit-gold' : 'text-jade-300'}`}>{item.name}</h3>
-                                        {item.type === 'consumable' && <span className="text-[10px] uppercase bg-jade-900 text-jade-300 px-1 rounded">Tiêu thụ</span>}
                                         {item.type === 'equipment' && <span className="text-[10px] uppercase bg-indigo-900 text-indigo-300 px-1 rounded">Trang bị</span>}
                                     </div>
                                     <p className="text-xs text-slate-400 mt-1">{item.description}</p>
+                                    
                                     <div className="mt-3 text-xs space-y-1">
-                                        {item.cost.herbs && <div className={state.resources.herbs < item.cost.herbs ? 'text-red-400' : 'text-slate-300'}>- {item.cost.herbs} Linh Thảo</div>}
-                                        {item.cost.ores && <div className={state.resources.ores < item.cost.ores ? 'text-red-400' : 'text-slate-300'}>- {item.cost.ores} Khoáng Thạch</div>}
-                                        {item.cost.spiritStones && <div className={state.resources.spiritStones < item.cost.spiritStones ? 'text-red-400' : 'text-slate-300'}>- {item.cost.spiritStones} Linh Thạch</div>}
+                                        {item.cost?.herbs && <div className={state.resources.herbs < item.cost.herbs ? 'text-red-400' : 'text-slate-300'}>- {item.cost.herbs} Linh Thảo</div>}
+                                        {item.cost?.ores && <div className={state.resources.ores < item.cost.ores ? 'text-red-400' : 'text-slate-300'}>- {item.cost.ores} Khoáng Thạch</div>}
+                                        {item.cost?.spiritStones && <div className={state.resources.spiritStones < item.cost.spiritStones ? 'text-red-400' : 'text-slate-300'}>- {item.cost.spiritStones} Linh Thạch</div>}
                                     </div>
                                 </div>
                                 <button 
                                     disabled={!canCraft}
-                                    onClick={() => dispatch({ type: 'CRAFT_ITEM', payload: { itemId: item.id, cost: item.cost } })}
+                                    onClick={() => dispatch({ type: 'CRAFT_ITEM', payload: { itemId: item.id, cost: item.cost || {} } })}
                                     className={`mt-4 w-full py-2 rounded flex items-center justify-center space-x-2 text-sm font-bold transition-colors
                                         ${canCraft 
                                             ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-lg' 

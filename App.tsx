@@ -7,6 +7,7 @@ import SettingsPanel from './components/SettingsPanel';
 import WelcomeModal from './components/WelcomeModal';
 import EncounterModal from './components/EncounterModal';
 import SectPanel from './components/SectPanel';
+import MarketPanel from './components/MarketPanel';
 import { useGame } from './context/GameContext';
 import { Info } from 'lucide-react';
 
@@ -20,6 +21,8 @@ const App: React.FC = () => {
         return <CultivationPanel />;
       case 'inventory':
         return <InventoryPanel />;
+      case 'market':
+        return <MarketPanel />;
       case 'exploration':
         return <ExplorationPanel />;
       case 'sect':

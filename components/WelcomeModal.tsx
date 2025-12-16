@@ -32,7 +32,7 @@ const WelcomeModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 animate-fadeIn">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 animate-fadeIn">
       <div className="bg-ink-900 border-2 border-slate-600 rounded-2xl p-6 md:p-8 max-w-2xl w-full shadow-[0_0_50px_rgba(0,0,0,0.5)] text-center relative overflow-hidden">
         
         {/* Step Indicator */}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Mountain, Backpack, Swords, Settings } from 'lucide-react';
+import { Sparkles, Mountain, Backpack, Swords, Settings, Store } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -10,6 +10,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const menuItems = [
     { id: 'cultivation', label: 'Tu Luyện', icon: Sparkles },
     { id: 'inventory', label: 'Túi Đồ', icon: Backpack },
+    { id: 'market', label: 'Linh Thạch Phường', icon: Store },
     { id: 'exploration', label: 'Du Ngoạn', icon: Mountain },
     { id: 'sect', label: 'Tông Môn', icon: Swords }, 
     { id: 'settings', label: 'Thiết Lập', icon: Settings },

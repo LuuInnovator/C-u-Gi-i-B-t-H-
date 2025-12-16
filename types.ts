@@ -6,6 +6,8 @@ export enum ResourceType {
 }
 
 export type CultivationPath = 'none' | 'righteous' | 'devil';
+export type ExplorationType = 'none' | 'adventure' | 'dungeon'; 
+export type ElementType = 'none' | 'metal' | 'wood' | 'water' | 'fire' | 'earth' | 'dark' | 'illusion' | 'chaos';
 
 export interface Resources {
   qi: number;
@@ -17,12 +19,13 @@ export interface Resources {
 
 export interface Realm {
   id: number;
-  name: string; // e.g., "Luyện Khí Tầng 1"
+  name: string; 
   baseQiGeneration: number;
   maxQiCap: number;
-  breakthroughChance: number; // 0.0 to 1.0
+  breakthroughChance: number; 
   defense: number;
   attack: number;
+  baseHp: number; // New base HP for scaling
 }
 
 export interface Sect {
@@ -30,25 +33,63 @@ export interface Sect {
   name: string;
   description: string;
   bonusDescription: string;
-  reqPath?: CultivationPath; // 'devil' means only devil can join/see
+  reqPath?: CultivationPath; 
+}
+
+export interface DamageDistribution {
+    physical: number; 
+    elemental: number; 
+    mental: number;   
+}
+
+export interface LootItem {
+    itemId: string;
+    rate: number; // 0.0 to 1.0 (e.g. 0.05 = 5%)
+    min: number;
+    max: number;
 }
 
 export interface SecretRealm {
   id: string;
   name: string;
   description: string;
-  reqRealmIndex: number; // Minimum realm required
-  riskLevel: string; // Text description
+  reqRealmIndex: number; 
+  riskLevel: string; 
   dropInfo: string;
-  difficultyMod: number; // Multiplier for monster stats
-  dropRateMod: number; // Multiplier for drop rates
+  difficultyMod: number; 
+  damageDistribution: DamageDistribution; 
+  element: ElementType; 
+  bossName: string; 
+  tacticTip: string; 
+  lootTable: LootItem[]; // New: Specific drops
+  dropRateMod: number;
 }
 
 export interface ItemStats {
-  attack?: number;
+  // Basic Attributes
+  attack?: number;       
   defense?: number;
-  qiRegen?: number; // Passive Qi per second
-  clickBonus?: number; // Bonus per click
+  strength?: number;     // Increases Phys Dmg
+  spirit?: number;       // Increases Magic/Elem Dmg
+  constitution?: number; // Increases HP (New)
+  willpower?: number;    // Increases Mental Res (New)
+
+  // Secondary
+  qiRegen?: number;
+  clickBonus?: number;
+  
+  // Advanced Combat
+  physPenetration?: number;  // % Ignore Armor
+  magicPenetration?: number; // % Ignore Magic Res
+  
+  // Resistances
+  fireRes?: number;
+  poisonRes?: number;
+  mentalRes?: number;
+  allRes?: number; // All Elemental Res
+
+  // Unique Bonus Descriptions (Logic handled in reducer)
+  effectDescription?: string;
 }
 
 export type EquipmentSlot = 'weapon' | 'armor' | 'artifact';
@@ -58,10 +99,13 @@ export interface Item {
   name: string;
   description: string;
   type: 'consumable' | 'material' | 'equipment';
-  slot?: EquipmentSlot; // Only for type 'equipment'
-  stats?: ItemStats;    // Only for type 'equipment'
+  slot?: EquipmentSlot; 
+  stats?: ItemStats;    
+  element?: ElementType; 
   effect?: (state: GameState) => Partial<GameState>;
   quantity: number;
+  price: number; 
+  rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'; // Visual flair
 }
 
 export interface LogEntry {
@@ -71,20 +115,27 @@ export interface LogEntry {
   timestamp: number;
 }
 
-// Definition for a Random Encounter
+export interface Trait {
+    id: string;
+    name: string;
+    description: string;
+    type: 'buff' | 'debuff' | 'mixed';
+}
+
 export interface EncounterOption {
   label: string;
   description?: string;
   type: 'normal' | 'risky' | 'righteous' | 'devil';
-  reqPath?: CultivationPath; // Only available for specific path
-  resourceCost?: Partial<Resources>; // Cost to choose this option
+  reqPath?: CultivationPath; 
+  resourceCost?: Partial<Resources>; 
+  gainTrait?: string; 
 }
 
 export interface Encounter {
   id: string;
   title: string;
   description: string;
-  image?: string; // Placeholder for icon name
+  image?: string; 
   options: EncounterOption[];
 }
 
@@ -97,40 +148,46 @@ export interface EquippedItems {
 export interface GameState {
   playerName: string;
   cultivationPath: CultivationPath;
-  sectId: string | null; // New field for Sect
+  sectId: string | null; 
   resources: Resources;
   realmIndex: number;
   clickMultiplier: number;
   autoGatherRate: number;
   inventory: Item[];
-  equippedItems: EquippedItems; // New field for Equipment
+  equippedItems: EquippedItems;
   logs: LogEntry[];
-  isExploring: boolean;
-  activeDungeonId: string | null; // If not null, player is in a secret realm
+  isExploring: boolean; 
+  explorationType: ExplorationType; 
+  activeDungeonId: string | null; 
   hp: number;
   maxHp: number;
   lastTick: number;
   activeEncounterId: string | null;
   lastEncounterTime: number;
-  traitorDebuffEndTime: number; // Timestamp when the betrayal debuff ends
-  breakthroughSupportMod: number; // Added: Bonus chance for breakthrough (0.0 to 1.0)
+  traitorDebuffEndTime: number; 
+  breakthroughSupportMod: number;
+  traits: string[]; 
+  protectionEndTime: number; 
+  weaknessEndTime: number; 
 }
 
 export type GameAction =
   | { type: 'TICK'; payload: number } 
   | { type: 'GATHER_QI' }
   | { type: 'ATTEMPT_BREAKTHROUGH' }
-  | { type: 'START_EXPLORATION' }
-  | { type: 'START_DUNGEON'; payload: string } // dungeonId
+  | { type: 'START_EXPLORATION'; payload: ExplorationType } 
+  | { type: 'START_DUNGEON'; payload: string } 
   | { type: 'STOP_EXPLORATION' }
   | { type: 'CRAFT_ITEM'; payload: { itemId: string; cost: Partial<Resources> } }
   | { type: 'USE_ITEM'; payload: string }
-  | { type: 'EQUIP_ITEM'; payload: string } // itemId
+  | { type: 'EQUIP_ITEM'; payload: string } 
   | { type: 'UNEQUIP_ITEM'; payload: EquipmentSlot }
+  | { type: 'BUY_ITEM'; payload: { itemId: string; amount: number } } 
+  | { type: 'SELL_ITEM'; payload: { itemId: string; amount: number } } 
   | { type: 'ADD_LOG'; payload: Omit<LogEntry, 'id' | 'timestamp'> }
   | { type: 'SET_PLAYER_NAME'; payload: string }
   | { type: 'CHOOSE_PATH'; payload: CultivationPath } 
-  | { type: 'JOIN_SECT'; payload: string } // Payload is Sect ID
+  | { type: 'JOIN_SECT'; payload: string } 
   | { type: 'LEAVE_SECT' }
   | { type: 'TRIGGER_ENCOUNTER'; payload: string } 
   | { type: 'RESOLVE_ENCOUNTER'; payload: { encounterId: string; optionIndex: number } }
