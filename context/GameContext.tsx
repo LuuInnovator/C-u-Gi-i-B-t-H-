@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react';
 import { GameState, GameAction, LogEntry, Realm, Item } from '../types';
-import { REALMS, INITIAL_STATE, CRAFTABLE_ITEMS, ENCOUNTERS } from '../constants';
+import { REALMS, INITIAL_STATE, CRAFTABLE_ITEMS, GAME_ITEMS, ENCOUNTERS, SECTS, SECRET_REALMS } from '../constants';
 
 // --- Reducer Logic ---
 
 const gameReducer = (state: GameState, action: GameAction): GameState => {
   const currentRealm = REALMS[state.realmIndex];
+  const now = Date.now();
 
   // PATH BONUSES CONSTANTS
   const RIGHTEOUS_PASSIVE_BONUS = 1.2; // +20% Passive Qi
@@ -19,9 +20,20 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
       const deltaSeconds = action.payload / 1000;
       
       let passiveMultiplier = 1;
-      if (state.cultivationPath === 'righteous') passiveMultiplier = RIGHTEOUS_PASSIVE_BONUS;
+      if (state.cultivationPath === 'righteous') passiveMultiplier *= RIGHTEOUS_PASSIVE_BONUS;
+      
+      // SECT BONUS: Thai Thanh Mon (+15% Passive Qi)
+      if (state.sectId === 'thai_thanh') passiveMultiplier *= 1.15;
 
-      const qiGain = (currentRealm.baseQiGeneration * passiveMultiplier) * deltaSeconds;
+      // TRAITOR DEBUFF CHECK: Reduce Qi by 50% if traitor
+      if (state.traitorDebuffEndTime > now) {
+          passiveMultiplier *= 0.5;
+      }
+
+      // ARTIFACT BONUS (Flat Increase)
+      const artifactBonus = state.equippedItems.artifact?.stats?.qiRegen || 0;
+
+      const qiGain = ((currentRealm.baseQiGeneration * passiveMultiplier) + artifactBonus) * deltaSeconds;
       
       let newQi = state.resources.qi + qiGain;
       if (newQi > currentRealm.maxQiCap) newQi = currentRealm.maxQiCap;
@@ -35,40 +47,101 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
       // 2. Handle Exploration Logic (Combat & Loot Loop)
       let newLogs = [...state.logs];
       let newHp = state.hp;
+      let newInventory = [...state.inventory];
       
       if (state.isExploring) {
+        // Determine Environment (Normal or Dungeon)
+        const activeDungeon = state.activeDungeonId ? SECRET_REALMS.find(d => d.id === state.activeDungeonId) : null;
+        const difficultyMod = activeDungeon ? activeDungeon.difficultyMod : 1.0;
+        const dropRateMod = activeDungeon ? activeDungeon.dropRateMod : 1.0;
+
         // Heal slowly if not dead
         if (state.hp > 0) {
             // Base encounter chance 50%
             let encounterChance = 0.50;
             if (state.cultivationPath === 'devil') encounterChance += DEVIL_LOOT_BONUS;
+            // SECT BONUS: Tieu Dao Phai (+10% Encounter Chance)
+            if (state.sectId === 'tieu_dao') encounterChance += 0.1;
+            
+            // Dungeon usually has higher encounter rate (more monsters)
+            if (activeDungeon) encounterChance += 0.2;
 
             if (Math.random() < encounterChance) { 
-                const monsterPower = Math.floor(currentRealm.attack * (0.6 + Math.random() * 0.3));
+                const baseMonsterPower = Math.floor(currentRealm.attack * (0.6 + Math.random() * 0.3));
+                const monsterPower = baseMonsterPower * difficultyMod;
                 
+                // PLAYER STATS CALCULATION
                 let playerDef = currentRealm.defense;
                 if (state.cultivationPath === 'righteous') playerDef *= RIGHTEOUS_DEF_BONUS;
+                // Add Armor Defense
+                playerDef += (state.equippedItems.armor?.stats?.defense || 0);
 
-                const damageTaken = Math.max(1, (monsterPower + (currentRealm.id * 2)) - playerDef);
+                let damageTaken = Math.max(1, (monsterPower + (currentRealm.id * 2)) - playerDef);
+                
+                // SECT BONUS: Thien Cang Tong (-15% Damage Taken)
+                if (state.sectId === 'thien_cang') damageTaken = Math.floor(damageTaken * 0.85);
+                
                 newHp = Math.max(0, state.hp - damageTaken);
                 
-                const herbsFound = Math.floor(Math.random() * 3) + 1 + currentRealm.id;
+                const herbsFound = Math.floor((Math.random() * 3) + 1 + currentRealm.id) * dropRateMod;
                 const oreChance = 0.3 + (currentRealm.id * 0.01);
                 let oresFound = 0;
                 if (Math.random() < oreChance) {
-                    oresFound = Math.floor(Math.random() * 2) + 1 + Math.floor(currentRealm.id / 3);
+                    oresFound = Math.floor((Math.random() * 2) + 1 + Math.floor(currentRealm.id / 3)) * dropRateMod;
                 }
-                const stonesFound = Math.floor(Math.random() * 10) + 1 + (currentRealm.id * 8);
+                const stonesFound = Math.floor((Math.random() * 10) + 1 + (currentRealm.id * 8)) * dropRateMod;
 
-                newState.resources.herbs += herbsFound;
-                newState.resources.ores += oresFound;
-                newState.resources.spiritStones += stonesFound;
+                // SECT BONUS: Duoc Vuong Coc (+25% Herb Rate is simplified to +1 herb here roughly)
+                let finalHerbs = Math.floor(herbsFound);
+                if (state.sectId === 'duoc_vuong' && Math.random() < 0.25) finalHerbs += 1;
+
+                // SECT BONUS: Huyet Sat Giao (+20% Stones, +5% HP Heal on win)
+                let finalStones = Math.floor(stonesFound);
+                if (state.sectId === 'huyet_sat') {
+                    finalStones = Math.floor(finalStones * 1.2);
+                    newHp = Math.min(state.maxHp, newHp + (state.maxHp * 0.05));
+                }
+
+                newState.resources.herbs += finalHerbs;
+                newState.resources.ores += Math.floor(oresFound);
+                newState.resources.spiritStones += finalStones;
+
+                let prefix = activeDungeon ? `[${activeDungeon.name}] ` : '';
+                let logMsg = `${prefix}Gặp yêu thú! Chịu ${Math.floor(damageTaken)} sát thương. Thu được: ${finalHerbs} Thảo, ${Math.floor(oresFound)} Khoáng, ${finalStones} Linh Thạch.`;
+
+                // ITEM DROP LOGIC (Base 10% chance * dropRateMod)
+                const itemDropChance = 0.10 * dropRateMod;
+
+                if (Math.random() < itemDropChance) {
+                    // Pool: Weapon (Low), Armor (Low), Small Pill (High), Breakthrough Pill (Medium)
+                    const rand = Math.random();
+                    let dropId = '';
+                    if (rand < 0.4) dropId = 'pill_small_qi';
+                    else if (rand < 0.6) dropId = 'pill_breakthrough';
+                    else if (rand < 0.8) dropId = 'armor_leather';
+                    else dropId = 'sword_iron';
+
+                    const dropItemDef = GAME_ITEMS.find(i => i.id === dropId);
+                    
+                    if (dropItemDef) {
+                        const existingItemIndex = newInventory.findIndex(i => i.id === dropId);
+                        if (existingItemIndex >= 0) {
+                            newInventory[existingItemIndex] = { 
+                                ...newInventory[existingItemIndex], 
+                                quantity: newInventory[existingItemIndex].quantity + 1 
+                            };
+                        } else {
+                            newInventory.push({ ...dropItemDef, quantity: 1 });
+                        }
+                        logMsg += ` [NHẶT ĐƯỢC: ${dropItemDef.name}]`;
+                    }
+                }
 
                 newLogs.unshift({
                     id: Date.now(),
                     timestamp: Date.now(),
                     type: 'combat',
-                    message: `Gặp yêu thú! Chịu ${Math.floor(damageTaken)} sát thương. Thu được: ${herbsFound} Thảo, ${oresFound} Khoáng, ${stonesFound} Linh Thạch.`
+                    message: logMsg
                 });
             }
         } else {
@@ -76,30 +149,35 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 id: Date.now(),
                 timestamp: Date.now(),
                 type: 'danger',
-                message: `Bạn đã trọng thương! Chuyến du ngoạn kết thúc.`
+                message: `Bạn đã trọng thương! Bị trục xuất khỏi ${activeDungeon ? activeDungeon.name : 'nơi hoang dã'}.`
             });
             return {
                 ...newState,
                 isExploring: false,
+                activeDungeonId: null, // Reset dungeon
                 logs: newLogs.slice(0, 50),
                 hp: 1, 
+                inventory: newInventory
             }
         }
       } else {
-        // Regen HP when idle (5% max HP per second)
-        newHp = Math.min(state.maxHp, state.hp + (state.maxHp * 0.05 * deltaSeconds));
+        // Regen HP when idle (Reduced to 1% per second from 5%)
+        newHp = Math.min(state.maxHp, state.hp + (state.maxHp * 0.01 * deltaSeconds));
       }
 
       newState.hp = newHp;
       newState.logs = newLogs.slice(0, 50);
+      newState.inventory = newInventory;
 
-      // 3. Random Encounter Check (Every Tick)
-      // Condition: Not currently in an encounter, and cooldown passed (e.g. 60 seconds)
-      const now = Date.now();
+      // 3. Random Encounter Check (Every Tick) - Only in Normal World
       const cooldown = 60000; // 1 minute
-      if (!newState.activeEncounterId && (now - (state.lastEncounterTime || 0) > cooldown)) {
-          // 0.5% chance per tick (assuming tick is 1s) -> avg every 3-4 mins
-          if (Math.random() < 0.005) {
+      if (!newState.activeEncounterId && !newState.activeDungeonId && (now - (state.lastEncounterTime || 0) > cooldown)) {
+          // 0.5% chance per tick
+          let encounterProb = 0.005;
+          // SECT BONUS: Tieu Dao Phai (+Probability)
+          if (state.sectId === 'tieu_dao') encounterProb = 0.008;
+
+          if (Math.random() < encounterProb) {
               const randomEncounter = ENCOUNTERS[Math.floor(Math.random() * ENCOUNTERS.length)];
               newState.activeEncounterId = randomEncounter.id;
           }
@@ -111,8 +189,19 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
     case 'GATHER_QI': {
       let clickMultiplier = state.clickMultiplier;
       if (state.cultivationPath === 'devil') clickMultiplier *= DEVIL_CLICK_BONUS;
+      
+      // SECT BONUS: Van Kiem Tong (+20% Click Qi)
+      if (state.sectId === 'van_kiem') clickMultiplier *= 1.2;
 
-      const gain = (1 + currentRealm.baseQiGeneration) * clickMultiplier;
+      // TRAITOR DEBUFF CHECK: Reduce Click Qi by 50% if traitor (optional, but consistent)
+      if (state.traitorDebuffEndTime > now) {
+          clickMultiplier *= 0.5;
+      }
+
+      // ARTIFACT CLICK BONUS
+      const artifactClickBonus = state.equippedItems.artifact?.stats?.clickBonus || 0;
+
+      const gain = ((1 + currentRealm.baseQiGeneration) * clickMultiplier) + artifactClickBonus;
       let newQi = state.resources.qi + gain;
       if (newQi > currentRealm.maxQiCap) newQi = currentRealm.maxQiCap;
       return {
@@ -129,7 +218,12 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
         };
       }
 
-      const success = Math.random() < currentRealm.breakthroughChance;
+      // Calculate total chance with mod
+      const totalChance = currentRealm.breakthroughChance + (state.breakthroughSupportMod || 0);
+      const success = Math.random() < totalChance;
+      
+      // Reset Mod after attempt regardless of result
+      const newBreakthroughSupportMod = 0;
       
       if (success) {
         const nextRealmIndex = state.realmIndex + 1;
@@ -141,6 +235,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
           resources: { ...state.resources, qi: 0, maxQi: REALMS[nextRealmIndex].maxQiCap },
           hp: state.maxHp * 1.5,
           maxHp: state.maxHp * 1.5,
+          breakthroughSupportMod: newBreakthroughSupportMod,
           logs: [{ id: Date.now(), timestamp: Date.now(), type: 'success', message: `Đột phá thành công! Bước vào cảnh giới ${REALMS[nextRealmIndex].name}!` }, ...state.logs]
         };
       } else {
@@ -148,7 +243,8 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
          return {
             ...state,
             resources: { ...state.resources, qi: state.resources.qi - lostQi },
-            logs: [{ id: Date.now(), timestamp: Date.now(), type: 'danger', message: `Đột phá thất bại! Tâm ma quấy nhiễu, tổn thất ${Math.floor(lostQi)} Linh Khí.` }, ...state.logs]
+            breakthroughSupportMod: newBreakthroughSupportMod,
+            logs: [{ id: Date.now(), timestamp: Date.now(), type: 'danger', message: `Đột phá thất bại! Tâm ma quấy nhiễu, tổn thất ${Math.floor(lostQi)} Linh Khí. Hiệu quả dược lực đã hết.` }, ...state.logs]
          };
       }
     }
@@ -160,17 +256,42 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
              logs: [{ id: Date.now(), timestamp: Date.now(), type: 'warning', message: 'Phàm nhân thân thể yếu đuối, không thể rời núi du ngoạn. Hãy đạt Luyện Khí!' }, ...state.logs] 
           };
       }
-      return { ...state, isExploring: true, logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: 'Bắt đầu rời động phủ du ngoạn...' }, ...state.logs] };
+      return { ...state, isExploring: true, activeDungeonId: null, logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: 'Bắt đầu rời động phủ du ngoạn...' }, ...state.logs] };
+
+    case 'START_DUNGEON': {
+      const dungeonId = action.payload;
+      const dungeon = SECRET_REALMS.find(d => d.id === dungeonId);
+      if (!dungeon) return state;
+
+      if (state.realmIndex < dungeon.reqRealmIndex) {
+          return {
+             ...state,
+             logs: [{ id: Date.now(), timestamp: Date.now(), type: 'warning', message: `Tu vi chưa đủ! Cần đạt ${REALMS[dungeon.reqRealmIndex].name} để vào ${dungeon.name}.` }, ...state.logs] 
+          };
+      }
+
+      return {
+          ...state,
+          isExploring: true,
+          activeDungeonId: dungeonId,
+          logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: `Tiến vào Bí Cảnh: ${dungeon.name}!` }, ...state.logs]
+      };
+    }
 
     case 'STOP_EXPLORATION':
-      return { ...state, isExploring: false, logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: 'Thu hồi thần thức, quay về động phủ.' }, ...state.logs] };
+      return { 
+          ...state, 
+          isExploring: false, 
+          activeDungeonId: null,
+          logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: 'Thu hồi thần thức, quay về động phủ.' }, ...state.logs] 
+      };
 
     case 'CRAFT_ITEM': {
       const { itemId, cost } = action.payload;
       const itemDef = CRAFTABLE_ITEMS.find(i => i.id === itemId);
       if (!itemDef) return state;
 
-      if ((state.resources.herbs < (cost.herbs || 0)) || (state.resources.ores < (cost.ores || 0))) {
+      if ((state.resources.herbs < (cost.herbs || 0)) || (state.resources.ores < (cost.ores || 0)) || (state.resources.spiritStones < (cost.spiritStones || 0))) {
          return { ...state, logs: [{ id: Date.now(), timestamp: Date.now(), type: 'warning', message: 'Không đủ nguyên liệu!' }, ...state.logs] };
       }
 
@@ -178,6 +299,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
           ...state.resources,
           herbs: state.resources.herbs - (cost.herbs || 0),
           ores: state.resources.ores - (cost.ores || 0),
+          spiritStones: state.resources.spiritStones - (cost.spiritStones || 0),
       };
 
       const existingItemIndex = state.inventory.findIndex(i => i.id === itemId);
@@ -193,6 +315,8 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
               name: itemDef.name,
               description: itemDef.description,
               type: itemDef.type,
+              slot: itemDef.slot,
+              stats: itemDef.stats,
               quantity: 1
           };
           newInventory.push(newItem);
@@ -213,15 +337,20 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
 
         const newInventory = [...state.inventory];
         let newQi = state.resources.qi;
+        let newBreakthroughMod = state.breakthroughSupportMod || 0;
         let msg = '';
+        const item = newInventory[itemIndex];
 
         if (itemId === 'pill_small_qi') {
             newQi = Math.min(currentRealm.maxQiCap, newQi + 100);
             msg = 'Sử dụng Tiểu Linh Đan, tăng 100 Linh Khí.';
+        } else if (itemId === 'pill_breakthrough') {
+            newBreakthroughMod = 0.2; // Set 20% bonus
+            msg = 'Dược lực của Trúc Cơ Đan lan tỏa toàn thân! Tỷ lệ đột phá lần tới tăng thêm 20%.';
         }
 
-        if (newInventory[itemIndex].quantity > 1) {
-            newInventory[itemIndex].quantity -= 1;
+        if (item.quantity > 1) {
+            item.quantity -= 1;
         } else {
             newInventory.splice(itemIndex, 1);
         }
@@ -230,7 +359,74 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             ...state,
             resources: { ...state.resources, qi: newQi },
             inventory: newInventory,
+            breakthroughSupportMod: newBreakthroughMod,
             logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: msg }, ...state.logs]
+        };
+    }
+
+    case 'EQUIP_ITEM': {
+        const itemId = action.payload;
+        const itemIndex = state.inventory.findIndex(i => i.id === itemId);
+        if (itemIndex === -1) return state;
+
+        const itemToEquip = state.inventory[itemIndex];
+        if (itemToEquip.type !== 'equipment' || !itemToEquip.slot) return state;
+
+        const slot = itemToEquip.slot;
+        const currentEquipped = state.equippedItems[slot];
+        
+        // Remove 1 from inventory
+        let newInventory = [...state.inventory];
+        if (itemToEquip.quantity > 1) {
+            newInventory[itemIndex] = { ...itemToEquip, quantity: itemToEquip.quantity - 1 };
+        } else {
+            newInventory.splice(itemIndex, 1);
+        }
+
+        // If something was equipped, put it back in inventory
+        if (currentEquipped) {
+            // Check if existing item of same ID exists to stack
+            const existingIndex = newInventory.findIndex(i => i.id === currentEquipped.id);
+            if (existingIndex >= 0) {
+                 newInventory[existingIndex] = { ...newInventory[existingIndex], quantity: newInventory[existingIndex].quantity + 1 };
+            } else {
+                 newInventory.push(currentEquipped);
+            }
+        }
+
+        return {
+            ...state,
+            inventory: newInventory,
+            equippedItems: {
+                ...state.equippedItems,
+                [slot]: itemToEquip // Equipped item conceptually has quantity 1 so we don't store quantity here usually, or rely on base obj
+            },
+            logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: `Đã trang bị ${itemToEquip.name}.` }, ...state.logs]
+        };
+    }
+
+    case 'UNEQUIP_ITEM': {
+        const slot = action.payload;
+        const itemToUnequip = state.equippedItems[slot];
+        if (!itemToUnequip) return state;
+
+        let newInventory = [...state.inventory];
+        // Stack check
+        const existingIndex = newInventory.findIndex(i => i.id === itemToUnequip.id);
+        if (existingIndex >= 0) {
+             newInventory[existingIndex] = { ...newInventory[existingIndex], quantity: newInventory[existingIndex].quantity + 1 };
+        } else {
+             newInventory.push({ ...itemToUnequip, quantity: 1 });
+        }
+
+        return {
+            ...state,
+            inventory: newInventory,
+            equippedItems: {
+                ...state.equippedItems,
+                [slot]: null
+            },
+            logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: `Đã tháo ${itemToUnequip.name}.` }, ...state.logs]
         };
     }
 
@@ -243,6 +439,43 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             cultivationPath: action.payload,
             logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: `Đạo tâm đã định. Bạn đã chọn con đường: ${action.payload === 'righteous' ? 'Chính Đạo' : 'Ma Đạo'}.` }, ...state.logs]
         };
+
+    case 'JOIN_SECT': {
+        // Restriction: Must be Foundation Establishment (Level 6) or higher
+        if (state.realmIndex < 6) {
+             return {
+                 ...state,
+                 logs: [{ id: Date.now(), timestamp: Date.now(), type: 'warning', message: `Tu vi chưa đủ! Cần đạt cảnh giới Trúc Cơ để được các Tông Môn để mắt tới.` }, ...state.logs]
+             }
+        }
+
+        // Prevent joining if traitor debuff is active
+        if (state.traitorDebuffEndTime > now) {
+             return {
+                 ...state,
+                 logs: [{ id: Date.now(), timestamp: Date.now(), type: 'danger', message: `Danh tiếng đã mất, không tông môn nào dám thu nhận bạn lúc này!` }, ...state.logs]
+             }
+        }
+
+        const sectId = action.payload;
+        const sect = SECTS.find(s => s.id === sectId);
+        if (!sect) return state;
+        return {
+            ...state,
+            sectId: sectId,
+            logs: [{ id: Date.now(), timestamp: Date.now(), type: 'success', message: `Chúc mừng! Bạn đã gia nhập ${sect.name}.` }, ...state.logs]
+        }
+    }
+
+    case 'LEAVE_SECT': {
+        const penaltyDuration = 90 * 60 * 1000; // 90 minutes (1.5 hours)
+        return {
+            ...state,
+            sectId: null,
+            traitorDebuffEndTime: Date.now() + penaltyDuration,
+            logs: [{ id: Date.now(), timestamp: Date.now(), type: 'warning', message: `Bạn đã phản bội tông môn! Bị phỉ nhổ trong 1 giờ 30 phút (-50% Linh Khí, Không thể gia nhập phái khác).` }, ...state.logs]
+        }
+    }
 
     case 'TRIGGER_ENCOUNTER':
         return {
@@ -273,9 +506,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
         }
 
         // --- ENCOUNTER LOGIC ---
-        // This is simplified hardcoded logic for the specific encounter IDs
-        // In a bigger app, we'd use a strategy pattern or specific handlers.
-        
+        // (Existing Logic preserved)
         if (encounterId === 'beggar_mystery') {
             if (optionIndex === 0) { // Give stones
                 const reward = Math.floor(Math.random() * 500) + 100;
@@ -310,7 +541,20 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
         }
         else if (encounterId === 'ancient_ruin') {
             if (optionIndex === 0) { // Enter
-                if (Math.random() > 0.4) {
+                const roll = Math.random();
+                if (roll < 0.3) {
+                    const artifact = GAME_ITEMS.find(i => i.id === 'artifact_bead');
+                    if (artifact) {
+                         const existingIndex = newState.inventory.findIndex(i => i.id === 'artifact_bead');
+                         if (existingIndex >= 0) {
+                            newState.inventory[existingIndex].quantity += 1;
+                         } else {
+                            newState.inventory.push({...artifact, quantity: 1});
+                         }
+                         msg = 'CƠ DUYÊN! Tìm được Tụ Linh Châu trong di tích cổ!';
+                         type = 'success';
+                    }
+                } else if (roll < 0.6) {
                     newState.resources.spiritStones += 100;
                     newState.resources.ores += 20;
                     msg = 'Bên trong là di tích của một Luyện Khí Sư! Thu hoạch lớn.';
@@ -379,6 +623,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
      if (saved) {
          try {
              const parsed = JSON.parse(saved);
+             // Ensure legacy fields exist
+             if (parsed.sectId === undefined) parsed.sectId = null;
+             if (parsed.traitorDebuffEndTime === undefined) parsed.traitorDebuffEndTime = 0;
+             if (parsed.equippedItems === undefined) parsed.equippedItems = INITIAL_STATE.equippedItems;
+             if (parsed.breakthroughSupportMod === undefined) parsed.breakthroughSupportMod = 0;
+             if (parsed.activeDungeonId === undefined) parsed.activeDungeonId = null;
              return { ...initial, ...parsed };
          } catch (e) {
              console.error("Failed to load save", e);

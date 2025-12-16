@@ -1,15 +1,64 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { CRAFTABLE_ITEMS } from '../constants';
-import { Package, Hammer, Beaker } from 'lucide-react';
+import { Package, Hammer, Beaker, Shield, Swords, Sparkles, X } from 'lucide-react';
+import { Item, EquipmentSlot } from '../types';
 
 const InventoryPanel: React.FC = () => {
   const { state, dispatch } = useGame();
   const [activeTab, setActiveTab] = useState<'items' | 'crafting'>('items');
 
+  const renderEquippedItem = (slot: EquipmentSlot, icon: React.ReactNode, label: string) => {
+      const item = state.equippedItems[slot];
+      return (
+          <div className="bg-slate-800 p-3 rounded-lg border border-slate-700 flex items-center space-x-3 relative group">
+              <div className={`p-2 rounded bg-slate-900 border ${item ? 'border-jade-500' : 'border-slate-700'}`}>
+                  {icon}
+              </div>
+              <div className="flex-1">
+                  <p className="text-xs text-slate-500 uppercase">{label}</p>
+                  {item ? (
+                      <div>
+                          <p className="text-sm font-bold text-spirit-gold">{item.name}</p>
+                          <div className="text-[10px] text-slate-400">
+                             {item.stats?.attack && <span>Công +{item.stats.attack} </span>}
+                             {item.stats?.defense && <span>Thủ +{item.stats.defense} </span>}
+                             {item.stats?.qiRegen && <span>Linh Khí +{item.stats.qiRegen}/s </span>}
+                          </div>
+                      </div>
+                  ) : (
+                      <p className="text-sm text-slate-600 italic">Trống</p>
+                  )}
+              </div>
+              {item && (
+                  <button 
+                    onClick={() => dispatch({ type: 'UNEQUIP_ITEM', payload: slot })}
+                    className="absolute top-2 right-2 text-slate-500 hover:text-red-400"
+                    title="Tháo trang bị"
+                  >
+                      <X size={16} />
+                  </button>
+              )}
+          </div>
+      );
+  };
+
   return (
     <div className="p-4 md:p-8 h-full flex flex-col">
-      <div className="flex space-x-4 mb-6 border-b border-slate-700 pb-2">
+      {/* EQUIPMENT SECTION */}
+      <div className="mb-6">
+          <h3 className="text-sm font-bold text-slate-400 mb-3 uppercase tracking-wider flex items-center gap-2">
+              <Shield size={16} /> Trang Bị & Pháp Bảo
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {renderEquippedItem('weapon', <Swords size={20} className="text-slate-400" />, 'Vũ Khí')}
+              {renderEquippedItem('armor', <Shield size={20} className="text-slate-400" />, 'Y Phục')}
+              {renderEquippedItem('artifact', <Sparkles size={20} className="text-slate-400" />, 'Pháp Bảo')}
+          </div>
+      </div>
+
+      {/* TABS */}
+      <div className="flex space-x-4 mb-4 border-b border-slate-700 pb-2">
         <button 
             onClick={() => setActiveTab('items')}
             className={`flex items-center space-x-2 pb-2 px-2 ${activeTab === 'items' ? 'text-jade-400 border-b-2 border-jade-400' : 'text-slate-400 hover:text-slate-200'}`}
@@ -20,7 +69,7 @@ const InventoryPanel: React.FC = () => {
             onClick={() => setActiveTab('crafting')}
             className={`flex items-center space-x-2 pb-2 px-2 ${activeTab === 'crafting' ? 'text-spirit-gold border-b-2 border-spirit-gold' : 'text-slate-400 hover:text-slate-200'}`}
         >
-            <Beaker size={18} /> <span>Luyện Đan</span>
+            <Hammer size={18} /> <span>Chế Tạo</span>
         </button>
       </div>
 
@@ -34,21 +83,39 @@ const InventoryPanel: React.FC = () => {
                 ) : (
                     state.inventory.map((item, idx) => (
                         <div key={`${item.id}-${idx}`} className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex justify-between items-start">
-                            <div>
-                                <h3 className="font-bold text-jade-300">{item.name}</h3>
+                            <div className="flex-1 pr-2">
+                                <h3 className={`font-bold ${item.type === 'equipment' ? 'text-spirit-gold' : 'text-jade-300'}`}>{item.name}</h3>
                                 <p className="text-xs text-slate-400 mt-1">{item.description}</p>
+                                {/* Show Stats for Equipment in Inventory */}
+                                {item.type === 'equipment' && item.stats && (
+                                    <div className="mt-1 flex gap-2 text-[10px] text-indigo-300 bg-indigo-900/20 px-1 py-0.5 rounded w-fit">
+                                        {item.stats.attack && <span>Công: {item.stats.attack}</span>}
+                                        {item.stats.defense && <span>Thủ: {item.stats.defense}</span>}
+                                        {item.stats.qiRegen && <span>Hồi: {item.stats.qiRegen}/s</span>}
+                                    </div>
+                                )}
                                 <span className="text-xs bg-slate-900 px-2 py-0.5 rounded mt-2 inline-block text-slate-300">
                                     Số lượng: {item.quantity}
                                 </span>
                             </div>
-                            {item.type === 'consumable' && (
-                                <button 
-                                    onClick={() => dispatch({ type: 'USE_ITEM', payload: item.id })}
-                                    className="bg-slate-700 hover:bg-slate-600 text-xs px-3 py-1 rounded text-white"
-                                >
-                                    Dùng
-                                </button>
-                            )}
+                            <div className="flex flex-col gap-2">
+                                {item.type === 'consumable' && (
+                                    <button 
+                                        onClick={() => dispatch({ type: 'USE_ITEM', payload: item.id })}
+                                        className="bg-slate-700 hover:bg-slate-600 text-xs px-3 py-1 rounded text-white border border-slate-600"
+                                    >
+                                        Dùng
+                                    </button>
+                                )}
+                                {item.type === 'equipment' && (
+                                    <button 
+                                        onClick={() => dispatch({ type: 'EQUIP_ITEM', payload: item.id })}
+                                        className="bg-indigo-700 hover:bg-indigo-600 text-xs px-3 py-1 rounded text-white border border-indigo-600"
+                                    >
+                                        Trang bị
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     ))
                 )}
@@ -57,31 +124,35 @@ const InventoryPanel: React.FC = () => {
 
         {activeTab === 'crafting' && (
              <div className="space-y-4">
-                 <div className="bg-ink-800 p-4 rounded border border-slate-700 mb-4">
+                 <div className="bg-ink-800 p-4 rounded border border-slate-700 mb-4 sticky top-0 z-10 shadow-lg">
                      <h3 className="text-sm font-bold text-slate-300 mb-2">Tài Nguyên Hiện Có</h3>
-                     <div className="flex space-x-4 text-sm">
+                     <div className="flex space-x-4 text-sm flex-wrap gap-y-2">
                          <span className="text-jade-400">Linh Thảo: {state.resources.herbs}</span>
                          <span className="text-slate-400">Khoáng Thạch: {state.resources.ores}</span>
+                         <span className="text-spirit-gold">Linh Thạch: {state.resources.spiritStones}</span>
                      </div>
                  </div>
 
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
                     {CRAFTABLE_ITEMS.map((item) => {
                         const canCraft = 
                             state.resources.herbs >= (item.cost.herbs || 0) &&
-                            state.resources.ores >= (item.cost.ores || 0);
+                            state.resources.ores >= (item.cost.ores || 0) &&
+                            state.resources.spiritStones >= (item.cost.spiritStones || 0);
 
                         return (
                             <div key={item.id} className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-col justify-between">
                                 <div>
                                     <div className="flex justify-between items-start">
-                                        <h3 className="font-bold text-spirit-gold">{item.name}</h3>
+                                        <h3 className={`font-bold ${item.type === 'equipment' ? 'text-spirit-gold' : 'text-jade-300'}`}>{item.name}</h3>
                                         {item.type === 'consumable' && <span className="text-[10px] uppercase bg-jade-900 text-jade-300 px-1 rounded">Tiêu thụ</span>}
+                                        {item.type === 'equipment' && <span className="text-[10px] uppercase bg-indigo-900 text-indigo-300 px-1 rounded">Trang bị</span>}
                                     </div>
                                     <p className="text-xs text-slate-400 mt-1">{item.description}</p>
                                     <div className="mt-3 text-xs space-y-1">
                                         {item.cost.herbs && <div className={state.resources.herbs < item.cost.herbs ? 'text-red-400' : 'text-slate-300'}>- {item.cost.herbs} Linh Thảo</div>}
                                         {item.cost.ores && <div className={state.resources.ores < item.cost.ores ? 'text-red-400' : 'text-slate-300'}>- {item.cost.ores} Khoáng Thạch</div>}
+                                        {item.cost.spiritStones && <div className={state.resources.spiritStones < item.cost.spiritStones ? 'text-red-400' : 'text-slate-300'}>- {item.cost.spiritStones} Linh Thạch</div>}
                                     </div>
                                 </div>
                                 <button 

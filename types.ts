@@ -25,11 +25,41 @@ export interface Realm {
   attack: number;
 }
 
+export interface Sect {
+  id: string;
+  name: string;
+  description: string;
+  bonusDescription: string;
+  reqPath?: CultivationPath; // 'devil' means only devil can join/see
+}
+
+export interface SecretRealm {
+  id: string;
+  name: string;
+  description: string;
+  reqRealmIndex: number; // Minimum realm required
+  riskLevel: string; // Text description
+  dropInfo: string;
+  difficultyMod: number; // Multiplier for monster stats
+  dropRateMod: number; // Multiplier for drop rates
+}
+
+export interface ItemStats {
+  attack?: number;
+  defense?: number;
+  qiRegen?: number; // Passive Qi per second
+  clickBonus?: number; // Bonus per click
+}
+
+export type EquipmentSlot = 'weapon' | 'armor' | 'artifact';
+
 export interface Item {
   id: string;
   name: string;
   description: string;
   type: 'consumable' | 'material' | 'equipment';
+  slot?: EquipmentSlot; // Only for type 'equipment'
+  stats?: ItemStats;    // Only for type 'equipment'
   effect?: (state: GameState) => Partial<GameState>;
   quantity: number;
 }
@@ -58,22 +88,32 @@ export interface Encounter {
   options: EncounterOption[];
 }
 
+export interface EquippedItems {
+  weapon: Item | null;
+  armor: Item | null;
+  artifact: Item | null;
+}
+
 export interface GameState {
   playerName: string;
   cultivationPath: CultivationPath;
+  sectId: string | null; // New field for Sect
   resources: Resources;
   realmIndex: number;
   clickMultiplier: number;
   autoGatherRate: number;
   inventory: Item[];
+  equippedItems: EquippedItems; // New field for Equipment
   logs: LogEntry[];
   isExploring: boolean;
+  activeDungeonId: string | null; // If not null, player is in a secret realm
   hp: number;
   maxHp: number;
   lastTick: number;
-  // New fields for Encounters
   activeEncounterId: string | null;
-  lastEncounterTime: number; 
+  lastEncounterTime: number;
+  traitorDebuffEndTime: number; // Timestamp when the betrayal debuff ends
+  breakthroughSupportMod: number; // Added: Bonus chance for breakthrough (0.0 to 1.0)
 }
 
 export type GameAction =
@@ -81,12 +121,17 @@ export type GameAction =
   | { type: 'GATHER_QI' }
   | { type: 'ATTEMPT_BREAKTHROUGH' }
   | { type: 'START_EXPLORATION' }
+  | { type: 'START_DUNGEON'; payload: string } // dungeonId
   | { type: 'STOP_EXPLORATION' }
   | { type: 'CRAFT_ITEM'; payload: { itemId: string; cost: Partial<Resources> } }
   | { type: 'USE_ITEM'; payload: string }
+  | { type: 'EQUIP_ITEM'; payload: string } // itemId
+  | { type: 'UNEQUIP_ITEM'; payload: EquipmentSlot }
   | { type: 'ADD_LOG'; payload: Omit<LogEntry, 'id' | 'timestamp'> }
   | { type: 'SET_PLAYER_NAME'; payload: string }
   | { type: 'CHOOSE_PATH'; payload: CultivationPath } 
-  | { type: 'TRIGGER_ENCOUNTER'; payload: string } // Payload is Encounter ID
+  | { type: 'JOIN_SECT'; payload: string } // Payload is Sect ID
+  | { type: 'LEAVE_SECT' }
+  | { type: 'TRIGGER_ENCOUNTER'; payload: string } 
   | { type: 'RESOLVE_ENCOUNTER'; payload: { encounterId: string; optionIndex: number } }
   | { type: 'LOAD_GAME'; payload: GameState };

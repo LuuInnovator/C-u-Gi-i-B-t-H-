@@ -6,6 +6,7 @@ import ExplorationPanel from './components/ExplorationPanel';
 import SettingsPanel from './components/SettingsPanel';
 import WelcomeModal from './components/WelcomeModal';
 import EncounterModal from './components/EncounterModal';
+import SectPanel from './components/SectPanel';
 import { useGame } from './context/GameContext';
 import { Info } from 'lucide-react';
 
@@ -21,6 +22,8 @@ const App: React.FC = () => {
         return <InventoryPanel />;
       case 'exploration':
         return <ExplorationPanel />;
+      case 'sect':
+        return <SectPanel />;
       case 'settings':
         return <SettingsPanel />;
       default:

@@ -11,8 +11,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     { id: 'cultivation', label: 'Tu Luyện', icon: Sparkles },
     { id: 'inventory', label: 'Túi Đồ', icon: Backpack },
     { id: 'exploration', label: 'Du Ngoạn', icon: Mountain },
-    // Removed Leaderboard
-    { id: 'sect', label: 'Tông Môn', icon: Swords }, // Future feature
+    { id: 'sect', label: 'Tông Môn', icon: Swords }, 
     { id: 'settings', label: 'Thiết Lập', icon: Settings },
   ];
 
