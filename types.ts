@@ -37,13 +37,30 @@ export interface Item {
 export interface LogEntry {
   id: number;
   message: string;
-  type: 'info' | 'success' | 'warning' | 'danger' | 'combat';
+  type: 'info' | 'success' | 'warning' | 'danger' | 'combat' | 'encounter';
   timestamp: number;
+}
+
+// Definition for a Random Encounter
+export interface EncounterOption {
+  label: string;
+  description?: string;
+  type: 'normal' | 'risky' | 'righteous' | 'devil';
+  reqPath?: CultivationPath; // Only available for specific path
+  resourceCost?: Partial<Resources>; // Cost to choose this option
+}
+
+export interface Encounter {
+  id: string;
+  title: string;
+  description: string;
+  image?: string; // Placeholder for icon name
+  options: EncounterOption[];
 }
 
 export interface GameState {
   playerName: string;
-  cultivationPath: CultivationPath; // New field
+  cultivationPath: CultivationPath;
   resources: Resources;
   realmIndex: number;
   clickMultiplier: number;
@@ -54,10 +71,13 @@ export interface GameState {
   hp: number;
   maxHp: number;
   lastTick: number;
+  // New fields for Encounters
+  activeEncounterId: string | null;
+  lastEncounterTime: number; 
 }
 
 export type GameAction =
-  | { type: 'TICK'; payload: number } // payload is delta time in ms
+  | { type: 'TICK'; payload: number } 
   | { type: 'GATHER_QI' }
   | { type: 'ATTEMPT_BREAKTHROUGH' }
   | { type: 'START_EXPLORATION' }
@@ -66,5 +86,7 @@ export type GameAction =
   | { type: 'USE_ITEM'; payload: string }
   | { type: 'ADD_LOG'; payload: Omit<LogEntry, 'id' | 'timestamp'> }
   | { type: 'SET_PLAYER_NAME'; payload: string }
-  | { type: 'CHOOSE_PATH'; payload: CultivationPath } // New action
+  | { type: 'CHOOSE_PATH'; payload: CultivationPath } 
+  | { type: 'TRIGGER_ENCOUNTER'; payload: string } // Payload is Encounter ID
+  | { type: 'RESOLVE_ENCOUNTER'; payload: { encounterId: string; optionIndex: number } }
   | { type: 'LOAD_GAME'; payload: GameState };

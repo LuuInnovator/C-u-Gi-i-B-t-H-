@@ -1,4 +1,4 @@
-import { Realm, Item, GameState } from './types';
+import { Realm, Item, GameState, Encounter } from './types';
 
 export const REALMS: Realm[] = [
   { id: 0, name: 'Phàm Nhân', baseQiGeneration: 0, maxQiCap: 100, breakthroughChance: 1.0, attack: 1, defense: 0 },
@@ -38,6 +38,91 @@ export const CRAFTABLE_ITEMS = [
   }
 ];
 
+export const ENCOUNTERS: Encounter[] = [
+    {
+        id: 'beggar_mystery',
+        title: 'Lão Ăn Mày Bí Ẩn',
+        description: 'Trên đường du ngoạn, ngươi gặp một lão già ăn mặc rách rưới, tay cầm bình rượu vỡ, miệng lẩm bẩm những lời khó hiểu về "Thiên Đạo". Lão nhìn ngươi và chìa tay ra.',
+        options: [
+            {
+                label: 'Tặng 50 Linh Thạch',
+                description: 'Kết thiện duyên, biết đâu là cao nhân ẩn thế?',
+                type: 'normal',
+                resourceCost: { spiritStones: 50 }
+            },
+            {
+                label: 'Xua đuổi',
+                description: 'Ta tu tiên nghịch thiên, không rảnh lo chuyện bao đồng.',
+                type: 'normal'
+            },
+            {
+                label: 'Cướp bình rượu',
+                description: 'Cảm giác bình rượu này không tầm thường (Chỉ Ma Đạo).',
+                type: 'devil',
+                reqPath: 'devil'
+            }
+        ]
+    },
+    {
+        id: 'storm_qi',
+        title: 'Lôi Vân Tụ Hội',
+        description: 'Bầu trời bỗng nhiên tối sầm, mây đen vần vũ, sấm chớp rền vang. Đây là dấu hiệu Linh Khí hội tụ cực mạnh, nhưng cũng vô cùng nguy hiểm.',
+        options: [
+            {
+                label: 'Mạo hiểm hấp thụ',
+                description: 'Dùng thân thể ngạnh kháng sấm sét để đoạt lấy Tiên Thiên Linh Khí. (Tỉ lệ 50/50)',
+                type: 'risky'
+            },
+            {
+                label: 'Tìm nơi trú ẩn',
+                description: 'An toàn là trên hết.',
+                type: 'normal'
+            }
+        ]
+    },
+    {
+        id: 'ancient_ruin',
+        title: 'Động Phủ Cổ Xưa',
+        description: 'Ngươi phát hiện một cửa hang bị dây leo che khuất, bên trong tỏa ra dao động cấm chế yếu ớt.',
+        options: [
+            {
+                label: 'Phá cấm chế tiến vào',
+                description: 'Có thể tìm thấy kho báu, nhưng cũng có thể gặp bẫy rập.',
+                type: 'risky'
+            },
+            {
+                label: 'Bỏ qua',
+                description: 'Cẩn tắc vô áy náy.',
+                type: 'normal'
+            },
+            {
+                label: 'Dùng Huyết Tế',
+                description: 'Dùng máu bản thân để mở lối đi tắt (Mất máu, chắc chắn thành công).',
+                type: 'devil',
+                reqPath: 'devil'
+            }
+        ]
+    },
+    {
+        id: 'injured_beast',
+        title: 'Linh Thú Bị Thương',
+        description: 'Một con Hỏa Hồ Ly đang nằm thoi thóp bên suối, chân bị dính bẫy săn.',
+        options: [
+            {
+                label: 'Chữa trị',
+                description: 'Tốn 5 Linh Thảo để cứu nó.',
+                type: 'righteous',
+                resourceCost: { herbs: 5 }
+            },
+            {
+                label: 'Kết liễu lấy đan',
+                description: 'Yêu đan của Hỏa Hồ Ly rất có giá trị.',
+                type: 'devil'
+            }
+        ]
+    }
+];
+
 export const INITIAL_STATE: GameState = {
   playerName: 'Đạo Hữu Vô Danh',
   cultivationPath: 'none',
@@ -57,4 +142,6 @@ export const INITIAL_STATE: GameState = {
   hp: 100,
   maxHp: 100,
   lastTick: Date.now(),
+  activeEncounterId: null,
+  lastEncounterTime: Date.now(),
 };

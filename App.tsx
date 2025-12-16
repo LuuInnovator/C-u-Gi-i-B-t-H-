@@ -5,6 +5,7 @@ import InventoryPanel from './components/InventoryPanel';
 import ExplorationPanel from './components/ExplorationPanel';
 import SettingsPanel from './components/SettingsPanel';
 import WelcomeModal from './components/WelcomeModal';
+import EncounterModal from './components/EncounterModal';
 import { useGame } from './context/GameContext';
 import { Info } from 'lucide-react';
 
@@ -42,6 +43,9 @@ const App: React.FC = () => {
     <div className="flex flex-col md:flex-row h-screen bg-ink-900 text-slate-200 overflow-hidden font-sans">
       {/* Show Welcome Screen if player name is default OR cultivation path is missing (legacy saves) */}
       {(state.playerName === 'Đạo Hữu Vô Danh' || state.cultivationPath === 'none') && <WelcomeModal />}
+      
+      {/* Random Event Modal */}
+      <EncounterModal />
 
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       

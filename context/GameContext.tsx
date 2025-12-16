@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react';
 import { GameState, GameAction, LogEntry, Realm, Item } from '../types';
-import { REALMS, INITIAL_STATE, CRAFTABLE_ITEMS } from '../constants';
+import { REALMS, INITIAL_STATE, CRAFTABLE_ITEMS, ENCOUNTERS } from '../constants';
 
 // --- Reducer Logic ---
 
@@ -26,9 +26,14 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
       let newQi = state.resources.qi + qiGain;
       if (newQi > currentRealm.maxQiCap) newQi = currentRealm.maxQiCap;
 
+      let newState = {
+        ...state,
+        resources: { ...state.resources, qi: newQi },
+        lastTick: Date.now(),
+      };
+
       // 2. Handle Exploration Logic (Combat & Loot Loop)
       let newLogs = [...state.logs];
-      let newResources = { ...state.resources, qi: newQi };
       let newHp = state.hp;
       
       if (state.isExploring) {
@@ -36,43 +41,28 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
         if (state.hp > 0) {
             // Base encounter chance 50%
             let encounterChance = 0.50;
-            // Devil path gets more encounters (more loot, more danger)
             if (state.cultivationPath === 'devil') encounterChance += DEVIL_LOOT_BONUS;
 
             if (Math.random() < encounterChance) { 
-                // --- SCALING MONSTER DAMAGE ---
                 const monsterPower = Math.floor(currentRealm.attack * (0.6 + Math.random() * 0.3));
                 
-                // Calculate Player Defense
                 let playerDef = currentRealm.defense;
                 if (state.cultivationPath === 'righteous') playerDef *= RIGHTEOUS_DEF_BONUS;
 
-                // Damage calculation: Monster Atk - Player Def (Min 1 damage)
                 const damageTaken = Math.max(1, (monsterPower + (currentRealm.id * 2)) - playerDef);
-                
-                // Player takes damage
                 newHp = Math.max(0, state.hp - damageTaken);
                 
-                // --- SCALING LOOT ---
-                // Loot increases significantly with Realm Level (currentRealm.id)
-                // Devil path might get slight bonus to amount (handled via encounter frequency already, but let's add logic if needed later)
-                
-                // Herbs: Base (1-3) + Realm Level
                 const herbsFound = Math.floor(Math.random() * 3) + 1 + currentRealm.id;
-                
-                // Ores: Base chance 30% + 1% per Realm Level. 
                 const oreChance = 0.3 + (currentRealm.id * 0.01);
                 let oresFound = 0;
                 if (Math.random() < oreChance) {
                     oresFound = Math.floor(Math.random() * 2) + 1 + Math.floor(currentRealm.id / 3);
                 }
-
-                // Spirit Stones: Base (1-10) + (Realm Level * 8)
                 const stonesFound = Math.floor(Math.random() * 10) + 1 + (currentRealm.id * 8);
 
-                newResources.herbs += herbsFound;
-                newResources.ores += oresFound;
-                newResources.spiritStones += stonesFound;
+                newState.resources.herbs += herbsFound;
+                newState.resources.ores += oresFound;
+                newState.resources.spiritStones += stonesFound;
 
                 newLogs.unshift({
                     id: Date.now(),
@@ -82,7 +72,6 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 });
             }
         } else {
-            // Player died
             newLogs.unshift({
                 id: Date.now(),
                 timestamp: Date.now(),
@@ -90,11 +79,10 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 message: `Bạn đã trọng thương! Chuyến du ngoạn kết thúc.`
             });
             return {
-                ...state,
+                ...newState,
                 isExploring: false,
                 logs: newLogs.slice(0, 50),
-                hp: 1, // Revive at 1 hp
-                lastTick: Date.now(),
+                hp: 1, 
             }
         }
       } else {
@@ -102,13 +90,22 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
         newHp = Math.min(state.maxHp, state.hp + (state.maxHp * 0.05 * deltaSeconds));
       }
 
-      return {
-        ...state,
-        resources: newResources,
-        hp: newHp,
-        logs: newLogs.slice(0, 50), // Keep log size manageable
-        lastTick: Date.now(),
-      };
+      newState.hp = newHp;
+      newState.logs = newLogs.slice(0, 50);
+
+      // 3. Random Encounter Check (Every Tick)
+      // Condition: Not currently in an encounter, and cooldown passed (e.g. 60 seconds)
+      const now = Date.now();
+      const cooldown = 60000; // 1 minute
+      if (!newState.activeEncounterId && (now - (state.lastEncounterTime || 0) > cooldown)) {
+          // 0.5% chance per tick (assuming tick is 1s) -> avg every 3-4 mins
+          if (Math.random() < 0.005) {
+              const randomEncounter = ENCOUNTERS[Math.floor(Math.random() * ENCOUNTERS.length)];
+              newState.activeEncounterId = randomEncounter.id;
+          }
+      }
+
+      return newState;
     }
 
     case 'GATHER_QI': {
@@ -125,7 +122,6 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
     }
 
     case 'ATTEMPT_BREAKTHROUGH': {
-      // Check if enough Qi
       if (state.resources.qi < currentRealm.maxQiCap) {
         return {
           ...state,
@@ -137,18 +133,17 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
       
       if (success) {
         const nextRealmIndex = state.realmIndex + 1;
-        if (nextRealmIndex >= REALMS.length) return state; // Max level
+        if (nextRealmIndex >= REALMS.length) return state; 
 
         return {
           ...state,
           realmIndex: nextRealmIndex,
           resources: { ...state.resources, qi: 0, maxQi: REALMS[nextRealmIndex].maxQiCap },
-          hp: state.maxHp * 1.5, // Heal and boost
+          hp: state.maxHp * 1.5,
           maxHp: state.maxHp * 1.5,
           logs: [{ id: Date.now(), timestamp: Date.now(), type: 'success', message: `Đột phá thành công! Bước vào cảnh giới ${REALMS[nextRealmIndex].name}!` }, ...state.logs]
         };
       } else {
-         // Failure penalty: lose 30% current Qi
          const lostQi = state.resources.qi * 0.3;
          return {
             ...state,
@@ -159,7 +154,6 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
     }
 
     case 'START_EXPLORATION':
-      // Block mortals (Realm ID 0)
       if (state.realmIndex === 0) {
           return {
              ...state,
@@ -176,19 +170,16 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
       const itemDef = CRAFTABLE_ITEMS.find(i => i.id === itemId);
       if (!itemDef) return state;
 
-      // Check costs
       if ((state.resources.herbs < (cost.herbs || 0)) || (state.resources.ores < (cost.ores || 0))) {
          return { ...state, logs: [{ id: Date.now(), timestamp: Date.now(), type: 'warning', message: 'Không đủ nguyên liệu!' }, ...state.logs] };
       }
 
-      // Deduct resources
       const newResources = {
           ...state.resources,
           herbs: state.resources.herbs - (cost.herbs || 0),
           ores: state.resources.ores - (cost.ores || 0),
       };
 
-      // Add to inventory
       const existingItemIndex = state.inventory.findIndex(i => i.id === itemId);
       let newInventory = [...state.inventory];
       if (existingItemIndex >= 0) {
@@ -197,7 +188,6 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
               quantity: newInventory[existingItemIndex].quantity + 1 
           };
       } else {
-          // Explicitly creating Item to ensure type safety and remove 'cost' property
           const newItem: Item = {
               id: itemDef.id,
               name: itemDef.name,
@@ -221,27 +211,27 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
         const itemIndex = state.inventory.findIndex(i => i.id === itemId);
         if (itemIndex === -1) return state;
 
-        const item = state.inventory[itemIndex];
-        let newState = { ...state };
+        const newInventory = [...state.inventory];
+        let newQi = state.resources.qi;
         let msg = '';
 
-        // Hardcoded effects for MVP
         if (itemId === 'pill_small_qi') {
-            newState.resources.qi = Math.min(currentRealm.maxQiCap, newState.resources.qi + 100);
+            newQi = Math.min(currentRealm.maxQiCap, newQi + 100);
             msg = 'Sử dụng Tiểu Linh Đan, tăng 100 Linh Khí.';
         }
 
-        // Reduce quantity
-        const newInventory = [...state.inventory];
         if (newInventory[itemIndex].quantity > 1) {
             newInventory[itemIndex].quantity -= 1;
         } else {
             newInventory.splice(itemIndex, 1);
         }
-        newState.inventory = newInventory;
-        newState.logs = [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: msg }, ...newState.logs];
 
-        return newState;
+        return {
+            ...state,
+            resources: { ...state.resources, qi: newQi },
+            inventory: newInventory,
+            logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: msg }, ...state.logs]
+        };
     }
 
     case 'SET_PLAYER_NAME':
@@ -254,14 +244,115 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: `Đạo tâm đã định. Bạn đã chọn con đường: ${action.payload === 'righteous' ? 'Chính Đạo' : 'Ma Đạo'}.` }, ...state.logs]
         };
 
+    case 'TRIGGER_ENCOUNTER':
+        return {
+            ...state,
+            activeEncounterId: action.payload,
+            lastEncounterTime: Date.now()
+        };
+
+    case 'RESOLVE_ENCOUNTER': {
+        const { encounterId, optionIndex } = action.payload;
+        const encounter = ENCOUNTERS.find(e => e.id === encounterId);
+        if (!encounter) return { ...state, activeEncounterId: null };
+        
+        const option = encounter.options[optionIndex];
+        let newState = { ...state, activeEncounterId: null };
+        let msg = '';
+        let type: LogEntry['type'] = 'info';
+
+        // Check if user has cost resources
+        if (option.resourceCost) {
+            if (state.resources.spiritStones < (option.resourceCost.spiritStones || 0) || 
+                state.resources.herbs < (option.resourceCost.herbs || 0)) {
+                return { ...state, logs: [{ id: Date.now(), timestamp: Date.now(), type: 'warning', message: 'Không đủ tài nguyên để thực hiện lựa chọn này.' }, ...state.logs] };
+            }
+            // Deduct
+            newState.resources.spiritStones -= (option.resourceCost.spiritStones || 0);
+            newState.resources.herbs -= (option.resourceCost.herbs || 0);
+        }
+
+        // --- ENCOUNTER LOGIC ---
+        // This is simplified hardcoded logic for the specific encounter IDs
+        // In a bigger app, we'd use a strategy pattern or specific handlers.
+        
+        if (encounterId === 'beggar_mystery') {
+            if (optionIndex === 0) { // Give stones
+                const reward = Math.floor(Math.random() * 500) + 100;
+                newState.resources.qi = Math.min(newState.resources.maxQi, newState.resources.qi + reward);
+                msg = `Lão ăn mày cười lớn, vỗ vai ngươi truyền một luồng khí lạ. (+${reward} Linh Khí)`;
+                type = 'success';
+            } else if (optionIndex === 2) { // Rob (Devil)
+                const stones = Math.floor(Math.random() * 100) + 50;
+                newState.resources.spiritStones += stones;
+                msg = `Ngươi cướp bình rượu, bên trong hóa ra chứa đầy Linh Thạch! (+${stones} Linh Thạch)`;
+                type = 'success';
+            } else {
+                msg = 'Ngươi bỏ đi, lão ăn mày nhìn theo lắc đầu.';
+            }
+        }
+        else if (encounterId === 'storm_qi') {
+             if (optionIndex === 0) { // Risk
+                 if (Math.random() > 0.5) {
+                     const reward = currentRealm.maxQiCap * 0.2;
+                     newState.resources.qi = Math.min(newState.resources.maxQi, newState.resources.qi + reward);
+                     msg = `Đánh cược thành công! Cơ thể hấp thụ Thiên Lôi. (+${Math.floor(reward)} Linh Khí)`;
+                     type = 'success';
+                 } else {
+                     const dmg = state.maxHp * 0.3;
+                     newState.hp = Math.max(1, newState.hp - dmg);
+                     msg = `Thất bại! Sấm sét đánh cháy đen cả người. (-${Math.floor(dmg)} HP)`;
+                     type = 'danger';
+                 }
+             } else {
+                 msg = 'Ngươi tìm được hang động trú ẩn, bình an vô sự.';
+             }
+        }
+        else if (encounterId === 'ancient_ruin') {
+            if (optionIndex === 0) { // Enter
+                if (Math.random() > 0.4) {
+                    newState.resources.spiritStones += 100;
+                    newState.resources.ores += 20;
+                    msg = 'Bên trong là di tích của một Luyện Khí Sư! Thu hoạch lớn.';
+                    type = 'success';
+                } else {
+                     newState.hp = Math.max(1, newState.hp - 50);
+                     msg = 'Vừa bước vào liền kích hoạt bẫy rập! (-50 HP)';
+                     type = 'danger';
+                }
+            } else if (optionIndex === 2) { // Blood Sacrifice
+                newState.hp = Math.max(1, newState.hp - 30);
+                newState.resources.spiritStones += 200;
+                msg = 'Dùng máu mở lối đi tắt, tìm được kho báu ẩn. (-30 HP, +200 Linh Thạch)';
+                type = 'success';
+            } else {
+                msg = 'Ngươi quyết định không mạo hiểm.';
+            }
+        }
+        else if (encounterId === 'injured_beast') {
+            if (optionIndex === 0) { // Heal
+                const reward = 300;
+                newState.resources.qi = Math.min(newState.resources.maxQi, newState.resources.qi + reward);
+                msg = `Hồ ly cảm kích, nhả ra một viên nội đan tặng ngươi rồi biến mất. (+${reward} Linh Khí)`;
+                type = 'success';
+            } else { // Kill
+                const stones = 50;
+                newState.resources.spiritStones += stones;
+                msg = `Ngươi ra tay tàn nhẫn, thu được yêu đan đem bán. (+${stones} Linh Thạch)`;
+                type = 'combat';
+            }
+        }
+
+        newState.logs = [{ id: Date.now(), timestamp: Date.now(), type: type, message: `[Cơ Duyên] ${msg}` }, ...newState.logs];
+        return newState;
+    }
+
     case 'LOAD_GAME':
-        // Merge loaded state with INITIAL_STATE to ensure new fields are present if version changed
         return {
             ...INITIAL_STATE,
             ...action.payload,
-            // Ensure runtime flags are reset
             lastTick: Date.now(),
-            isExploring: false // Stop exploring on load to be safe
+            isExploring: false 
         };
 
     default:
@@ -284,12 +375,10 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(gameReducer, INITIAL_STATE, (initial) => {
-     // Try to load from local storage
      const saved = localStorage.getItem('cuu-gioi-bat-hu-save');
      if (saved) {
          try {
              const parsed = JSON.parse(saved);
-             // Merge with initial to ensure new fields exist if schema updated
              return { ...initial, ...parsed };
          } catch (e) {
              console.error("Failed to load save", e);
@@ -299,28 +388,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
      return initial;
   });
 
-  // Ref to hold state for setInterval/EventListener without causing re-renders/resets
   const stateRef = useRef(state);
-  // Ref to signal that we are resetting data, so STOP SAVING
   const isResettingRef = useRef(false);
 
-  // Update ref whenever state changes
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
 
-  // Game Loop
   useEffect(() => {
-    const tickRate = 1000; // 1 second
+    const tickRate = 1000; 
     const interval = setInterval(() => {
       dispatch({ type: 'TICK', payload: tickRate });
     }, tickRate);
     return () => clearInterval(interval);
   }, []);
 
-  // Manual Save Function
   const saveGame = useCallback(() => {
-      if (isResettingRef.current) return; // Prevent save if resetting
+      if (isResettingRef.current) return; 
       try {
         localStorage.setItem('cuu-gioi-bat-hu-save', JSON.stringify(stateRef.current));
       } catch (e) {
@@ -328,45 +412,32 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
   }, []);
 
-  // Robust Reset Function
   const resetGame = useCallback(() => {
-      isResettingRef.current = true; // Lock saving mechanism
+      isResettingRef.current = true; 
       localStorage.removeItem('cuu-gioi-bat-hu-save');
       window.location.reload();
   }, []);
 
-  // NEW: Safe Import Function (Hot Load - No Reload)
   const importSave = useCallback((data: string) => {
       try {
           const parsed = JSON.parse(data);
-          
-          // 1. Dispatch action to update state immediately in memory
           dispatch({ type: 'LOAD_GAME', payload: parsed });
-          
-          // 2. Force write to localStorage immediately (overwriting old data)
           localStorage.setItem('cuu-gioi-bat-hu-save', data);
-          
       } catch(e) {
           alert("Lỗi khi nạp dữ liệu: " + e);
       }
   }, []);
 
-  // Auto-Save Logic
   useEffect(() => {
       const handleSave = () => {
-          if (isResettingRef.current) return; // Crucial check!
+          if (isResettingRef.current) return; 
           localStorage.setItem('cuu-gioi-bat-hu-save', JSON.stringify(stateRef.current));
       };
-
-      const saveInterval = setInterval(handleSave, 5000); // Save every 5s
-      
-      // Save on tab close/refresh
+      const saveInterval = setInterval(handleSave, 5000); 
       window.addEventListener('beforeunload', handleSave);
-
       return () => {
           clearInterval(saveInterval);
           window.removeEventListener('beforeunload', handleSave);
-          // Only save on unmount if we are NOT resetting/importing via reload
           if (!isResettingRef.current) {
              handleSave(); 
           }
