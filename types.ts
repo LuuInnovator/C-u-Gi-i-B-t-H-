@@ -23,9 +23,6 @@ export interface Realm {
   baseQiGeneration: number;
   maxQiCap: number;
   breakthroughChance: number; 
-  defense: number;
-  attack: number;
-  baseHp: number; // New base HP for scaling
 }
 
 export interface Sect {
@@ -44,7 +41,7 @@ export interface DamageDistribution {
 
 export interface LootItem {
     itemId: string;
-    rate: number; // 0.0 to 1.0 (e.g. 0.05 = 5%)
+    rate: number; // 0.0 đến 1.0 (ví dụ 0.05 = 5%)
     min: number;
     max: number;
 }
@@ -61,35 +58,43 @@ export interface SecretRealm {
   element: ElementType; 
   bossName: string; 
   tacticTip: string; 
-  lootTable: LootItem[]; // New: Specific drops
+  lootTable: LootItem[]; 
   dropRateMod: number;
 }
 
 export interface ItemStats {
-  // Basic Attributes
   attack?: number;       
   defense?: number;
-  strength?: number;     // Increases Phys Dmg
-  spirit?: number;       // Increases Magic/Elem Dmg
-  constitution?: number; // Increases HP (New)
-  willpower?: number;    // Increases Mental Res (New)
+  strength?: number;     
+  spirit?: number;       
+  constitution?: number; 
+  willpower?: number;    
 
-  // Secondary
   qiRegen?: number;
   clickBonus?: number;
   
-  // Advanced Combat
-  physPenetration?: number;  // % Ignore Armor
-  magicPenetration?: number; // % Ignore Magic Res
+  physPenetration?: number;  
+  magicPenetration?: number; 
   
-  // Resistances
   fireRes?: number;
   poisonRes?: number;
   mentalRes?: number;
-  allRes?: number; // All Elemental Res
+  allRes?: number; 
 
-  // Unique Bonus Descriptions (Logic handled in reducer)
   effectDescription?: string;
+}
+
+// --- HỆ THỐNG KỸ NĂNG (MỚI) ---
+export type SkillType = 'buff_def' | 'buff_atk' | 'heal' | 'dmg_burst';
+
+export interface ActiveSkill {
+    id: string;
+    name: string;
+    description: string;
+    cooldown: number; // Milliseconds
+    duration?: number; // Milliseconds (nếu là buff)
+    type: SkillType;
+    value: number; // Giá trị (Sát thương, Giáp, HP hồi...)
 }
 
 export type EquipmentSlot = 'weapon' | 'armor' | 'artifact';
@@ -102,10 +107,11 @@ export interface Item {
   slot?: EquipmentSlot; 
   stats?: ItemStats;    
   element?: ElementType; 
+  activeSkill?: ActiveSkill; // Item có thể có kỹ năng kích hoạt (Pháp Bảo)
   effect?: (state: GameState) => Partial<GameState>;
   quantity: number;
   price: number; 
-  rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'; // Visual flair
+  rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'; 
 }
 
 export interface LogEntry {
@@ -145,6 +151,21 @@ export interface EquippedItems {
   artifact: Item | null;
 }
 
+export interface StatBonuses {
+    attack: number;
+    defense: number;
+    hp: number;
+}
+
+// --- STATE QUẢN LÝ BUFF & COOLDOWN (MỚI) ---
+export interface ActiveBuff {
+    id: string; // skill id
+    name: string;
+    type: SkillType;
+    value: number;
+    endTime: number;
+}
+
 export interface GameState {
   playerName: string;
   cultivationPath: CultivationPath;
@@ -168,7 +189,12 @@ export interface GameState {
   breakthroughSupportMod: number;
   traits: string[]; 
   protectionEndTime: number; 
-  weaknessEndTime: number; 
+  weaknessEndTime: number;
+  statBonuses: StatBonuses; 
+  
+  // Tính năng mới
+  skillCooldowns: Record<string, number>; // Map skillId -> timestamp available
+  activeBuffs: ActiveBuff[];
 }
 
 export type GameAction =
@@ -191,4 +217,5 @@ export type GameAction =
   | { type: 'LEAVE_SECT' }
   | { type: 'TRIGGER_ENCOUNTER'; payload: string } 
   | { type: 'RESOLVE_ENCOUNTER'; payload: { encounterId: string; optionIndex: number } }
-  | { type: 'LOAD_GAME'; payload: GameState };
+  | { type: 'LOAD_GAME'; payload: GameState }
+  | { type: 'ACTIVATE_SKILL'; payload: string }; // Payload là Skill ID

@@ -43,4 +43,13 @@ export const INITIAL_STATE: GameState = {
   traits: [],
   protectionEndTime: 0,
   weaknessEndTime: 0,
+  statBonuses: {
+      // Chỉ số khởi đầu cơ bản
+      attack: 5,
+      defense: 2,
+      hp: 100 
+  },
+  // Khởi tạo hệ thống kỹ năng
+  skillCooldowns: {},
+  activeBuffs: []
 };

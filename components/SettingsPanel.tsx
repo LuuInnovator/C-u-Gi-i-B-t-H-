@@ -9,7 +9,7 @@ const SettingsPanel: React.FC = () => {
 
   const handleReset = () => {
       if (window.confirm("CẢNH BÁO: Bạn có chắc chắn muốn 'Trọng Sinh' (Xóa toàn bộ dữ liệu) không? Hành động này không thể hoàn tác!")) {
-          // Use the context function to safely handle the reset race condition
+          // Sử dụng hàm reset an toàn từ context
           resetGame();
       }
   };
@@ -20,28 +20,27 @@ const SettingsPanel: React.FC = () => {
       setTimeout(() => setSaveStatus(''), 2000);
   };
 
-  // Export Save File (Fixed with Blob for better Mobile/PC compatibility)
+  // Xuất file lưu (Sử dụng Blob để tương thích tốt hơn)
   const handleExport = () => {
       try {
-          // 1. Convert state to formatted JSON string
+          // 1. Chuyển state thành chuỗi JSON
           const dataStr = JSON.stringify(state, null, 2);
           
-          // 2. Create a Blob (Binary Large Object) - safer than Data URI
+          // 2. Tạo Blob (Binary Large Object)
           const blob = new Blob([dataStr], { type: 'application/json' });
           
-          // 3. Create a temporary URL for the Blob
+          // 3. Tạo URL tạm thời
           const url = URL.createObjectURL(blob);
           
-          // 4. Create download link and trigger click
+          // 4. Tạo link tải xuống và kích hoạt
           const linkElement = document.createElement('a');
           linkElement.href = url;
           linkElement.download = `CuuGioiBatHu_Save_${state.playerName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.json`;
           
-          // Append to body is required for some browsers (Firefox/Mobile)
           document.body.appendChild(linkElement);
           linkElement.click();
           
-          // 5. Cleanup
+          // 5. Dọn dẹp
           document.body.removeChild(linkElement);
           URL.revokeObjectURL(url);
           
@@ -52,7 +51,7 @@ const SettingsPanel: React.FC = () => {
       }
   };
 
-  // Import Save File
+  // Nhập file lưu
   const handleImportClick = () => {
       fileInputRef.current?.click();
   };
@@ -65,16 +64,16 @@ const SettingsPanel: React.FC = () => {
       reader.onload = (e) => {
           try {
               const jsonStr = e.target?.result as string;
-              // Basic validation check
+              // Kiểm tra cơ bản
               const parsed = JSON.parse(jsonStr);
               
-              // Validate critical fields
+              // Validate các trường quan trọng
               if (!parsed.resources || !parsed.playerName || typeof parsed.realmIndex === 'undefined') {
                   throw new Error("Cấu trúc file không hợp lệ (thiếu resources hoặc playerName)");
               }
 
               if (window.confirm(`Tìm thấy dữ liệu của: ${parsed.playerName} (Cảnh giới: Lv.${parsed.realmIndex}).\nBạn có muốn nạp dữ liệu này không?`)) {
-                  // Use the safe import function from context (Hot Load)
+                  // Sử dụng hàm import an toàn
                   importSave(jsonStr);
                   alert(`Chào mừng đạo hữu ${parsed.playerName} quay trở lại!`);
               }
@@ -84,20 +83,20 @@ const SettingsPanel: React.FC = () => {
           }
       };
       reader.readAsText(fileObj);
-      // Reset input value so same file can be selected again if needed
+      // Reset input để có thể chọn lại cùng 1 file
       event.target.value = '';
   };
 
   return (
     <div className="p-4 md:p-8 h-full flex flex-col space-y-6">
-       {/* Header */}
+       {/* Tiêu đề */}
        <div className="flex justify-between items-center border-b border-slate-700 pb-4">
             <h2 className="text-xl font-bold text-slate-200 flex items-center">
-                <ScrollText className="mr-2 text-spirit-gold"/> Thiết Lập & Nhật Ký
+                <ScrollText className="mr-2 text-spirit-gold"/> Thiết Lập
             </h2>
        </div>
 
-       {/* Game Info / Actions */}
+       {/* Thông tin Game / Hành động */}
        <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-col gap-6">
             <div className="text-sm text-slate-400 border-b border-slate-700 pb-4">
                 <div className="flex justify-between items-center mb-2">
@@ -107,7 +106,7 @@ const SettingsPanel: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Manual Save */}
+                {/* Lưu Thủ Công */}
                 <button 
                     onClick={handleManualSave}
                     className="flex items-center justify-center space-x-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition-colors text-sm shadow-lg font-bold"
@@ -125,7 +124,7 @@ const SettingsPanel: React.FC = () => {
                     <span>Trọng Sinh (Xóa Data)</span>
                 </button>
 
-                {/* Export Data */}
+                {/* Xuất Data */}
                 <button 
                     onClick={handleExport}
                     className="flex items-center justify-center space-x-2 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-jade-400 border border-slate-600 rounded transition-colors text-sm font-bold"
@@ -134,7 +133,7 @@ const SettingsPanel: React.FC = () => {
                     <span>Xuất File Lưu</span>
                 </button>
 
-                {/* Import Data */}
+                {/* Nhập Data */}
                 <button 
                     onClick={handleImportClick}
                     className="flex items-center justify-center space-x-2 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-spirit-gold border border-slate-600 rounded transition-colors text-sm font-bold"
@@ -149,25 +148,6 @@ const SettingsPanel: React.FC = () => {
                     accept=".json,application/json" 
                     className="hidden" 
                 />
-            </div>
-       </div>
-
-       {/* Logs Area */}
-       <div className="flex-1 flex flex-col min-h-0">
-            <h3 className="text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider">Nhật Ký Hệ Thống</h3>
-            <div className="flex-1 overflow-y-auto space-y-2 bg-ink-800 p-4 rounded-lg border border-slate-700 font-mono text-sm shadow-inner">
-                {state.logs.length === 0 ? (
-                    <div className="text-center text-slate-600 italic py-10">Chưa có ghi chép nào...</div>
-                ) : (
-                    state.logs.map((log) => (
-                        <div key={log.id} className="border-b border-slate-700/50 pb-2 last:border-0 hover:bg-slate-800/30 px-2 rounded">
-                            <span className="text-slate-500 text-[10px] block mb-0.5">[{new Date(log.timestamp).toLocaleTimeString()}]</span> 
-                            <span className={log.type === 'combat' ? 'text-orange-300' : log.type === 'success' ? 'text-jade-400' : log.type === 'danger' ? 'text-red-400' : 'text-slate-300'}>
-                                {log.message}
-                            </span>
-                        </div>
-                    ))
-                )}
             </div>
        </div>
     </div>

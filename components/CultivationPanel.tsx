@@ -28,9 +28,9 @@ const CultivationPanel: React.FC = () => {
   const pathName = state.cultivationPath === 'devil' ? 'Ma Đạo' : 'Chính Đạo';
   const pathBg = state.cultivationPath === 'devil' ? 'bg-red-900/30 border-red-900' : 'bg-indigo-900/30 border-indigo-900';
 
-  // Calculate Display Stats (including equipment)
+  // Calculate Display Stats (Base 5 + Pills + Gear)
   const weaponStats = state.equippedItems.weapon?.stats || {};
-  let totalAttack = realm.attack + (weaponStats.attack || 0);
+  let totalAttack = 5 + (weaponStats.attack || 0) + (state.statBonuses?.attack || 0); // 5 là base
   let totalStr = weaponStats.strength || 0;
   let totalSpirit = weaponStats.spirit || 0;
 
@@ -39,9 +39,11 @@ const CultivationPanel: React.FC = () => {
       totalStr = Math.max(totalStr, 10) * 2;
   }
 
-  let totalDefense = realm.defense;
+  let totalDefense = (state.statBonuses?.defense || 0);
+  if (state.cultivationPath === 'righteous') totalDefense += 5; // Base righteous bonus
   if (state.cultivationPath === 'righteous') totalDefense = Math.floor(totalDefense * 1.3);
   totalDefense += (state.equippedItems.armor?.stats?.defense || 0);
+  
   if (state.traits.includes('body_demonization')) {
       totalDefense = Math.floor(totalDefense * 1.5);
   }
@@ -90,7 +92,7 @@ const CultivationPanel: React.FC = () => {
             <span className="text-slate-400 text-sm font-serif mb-1 mt-2">Cảnh Giới</span>
             <span className="text-2xl font-bold text-white text-center px-2">{realm.name}</span>
             <div className="mt-3 flex space-x-3 text-xs text-slate-400">
-                <span className="flex items-center gap-1" title="Tấn công Cơ bản">
+                <span className="flex items-center gap-1" title="Tấn công">
                     <Sword size={14} className="text-slate-400"/> 
                     {totalAttack}
                 </span>

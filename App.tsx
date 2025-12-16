@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import CultivationPanel from './components/CultivationPanel';
 import InventoryPanel from './components/InventoryPanel';
+import CharacterPanel from './components/CharacterPanel';
+import CraftingPanel from './components/CraftingPanel';
 import ExplorationPanel from './components/ExplorationPanel';
 import SettingsPanel from './components/SettingsPanel';
 import WelcomeModal from './components/WelcomeModal';
@@ -19,8 +21,12 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'cultivation':
         return <CultivationPanel />;
+      case 'character':
+        return <CharacterPanel />;
       case 'inventory':
         return <InventoryPanel />;
+      case 'crafting':
+        return <CraftingPanel />;
       case 'market':
         return <MarketPanel />;
       case 'exploration':

@@ -1,8 +1,13 @@
 import { Item } from '../types';
 
 export const GAME_ITEMS: Item[] = [
-  // --- NGUYÊN LIỆU / TIÊU HAO ---
-  { id: 'pill_small_qi', name: 'Tiểu Linh Đan', description: 'Tăng 100 Linh Khí.', quantity: 1, type: 'consumable', price: 50, rarity: 'common' },
+  // --- NGUYÊN LIỆU / TIÊU HAO CƠ BẢN ---
+  { 
+      id: 'pill_small_qi', 
+      name: 'Tiểu Linh Đan', 
+      description: 'Hồi phục ngay lập tức 10% Linh Khí tối đa.', 
+      quantity: 1, type: 'consumable', price: 50, rarity: 'common' 
+  },
   { id: 'pill_breakthrough', name: 'Trúc Cơ Đan', description: '+20% Tỷ lệ đột phá.', quantity: 1, type: 'consumable', price: 500, rarity: 'uncommon' },
   { id: 'pill_protection', name: 'Hộ Mệnh Đan', description: 'Chống One-Hit trong 5 phút.', quantity: 1, type: 'consumable', price: 1500, rarity: 'rare' },
   { id: 'ore_iron', name: 'Quặng Thiết', description: 'Nguyên liệu chế tạo cơ bản.', quantity: 1, type: 'material', price: 10, rarity: 'common' },
@@ -11,7 +16,27 @@ export const GAME_ITEMS: Item[] = [
   { id: 'ore_ice', name: 'Hàn Thiết', description: 'Sắt lạnh thấu xương.', quantity: 1, type: 'material', price: 50, rarity: 'uncommon' },
   { id: 'ore_gold', name: 'Kim Nguyên Thạch', description: 'Tinh hoa kim loại.', quantity: 1, type: 'material', price: 100, rarity: 'rare' },
 
-  // --- TRANG BỊ: CẢNH GIỚI LUYỆN KHÍ ---
+  // --- ĐAN DƯỢC TĂNG CHỈ SỐ VĨNH VIỄN ---
+  { 
+      id: 'pill_attack_permanent', 
+      name: 'Tăng Lực Đan', 
+      description: 'Vĩnh viễn tăng +2 Tấn Công. Cần dùng để bồi dưỡng cơ thể.', 
+      quantity: 1, type: 'consumable', price: 300, rarity: 'uncommon' 
+  },
+  { 
+      id: 'pill_defense_permanent', 
+      name: 'Kim Cang Đan', 
+      description: 'Vĩnh viễn tăng +2 Phòng Thủ. Giúp da thịt cứng như sắt đá.', 
+      quantity: 1, type: 'consumable', price: 300, rarity: 'uncommon' 
+  },
+  { 
+      id: 'pill_hp_permanent', 
+      name: 'Bổ Huyết Đan', 
+      description: 'Vĩnh viễn tăng +50 HP Tối Đa. Bổ khí huyết.', 
+      quantity: 1, type: 'consumable', price: 250, rarity: 'common' 
+  },
+
+  // --- TRANG BỊ: CẢNH GIỚI LUYỆN KHÍ (0-5) ---
   {
     id: 'sword_black_iron',
     name: 'Hắc Thiết Kiếm',
@@ -31,23 +56,50 @@ export const GAME_ITEMS: Item[] = [
     name: 'Thạch Thủ Hoàn',
     description: 'Vòng tay bằng đá nặng trịch.',
     quantity: 1, type: 'equipment', slot: 'artifact', element: 'earth', rarity: 'common', price: 180,
-    stats: { defense: 12, effectDescription: 'Trấn Hộ: Giảm 10% sát thương khi HP < 20%.' }
+    stats: { defense: 12, effectDescription: 'Trấn Hộ: Giảm 10% sát thương khi HP < 20%.' },
+    // Pháp bảo sơ cấp, có kỹ năng nhưng yếu
+    activeSkill: {
+        id: 'skill_rock_skin',
+        name: 'Nham Thạch Hộ Thể',
+        description: 'Tăng 50 Thủ trong 10s.',
+        cooldown: 30000,
+        duration: 10000,
+        type: 'buff_def',
+        value: 50
+    }
   },
 
-  // --- TRANG BỊ: CẢNH GIỚI TRÚC CƠ ---
+  // --- TRANG BỊ: CẢNH GIỚI TRÚC CƠ (6-8) ---
   {
     id: 'shield_ice',
     name: 'Huyền Băng Thuẫn',
     description: 'Khiên băng tỏa ra hàn khí.',
     quantity: 1, type: 'equipment', slot: 'armor', element: 'water', rarity: 'uncommon', price: 1200,
-    stats: { spirit: 45, fireRes: 30, effectDescription: 'Hàn Khí: Giảm 15% Sát Thương từ hệ Hỏa.' }
+    stats: { spirit: 45, fireRes: 30, effectDescription: 'Hàn Khí: Giảm 15% Sát Thương từ hệ Hỏa.' },
+    activeSkill: {
+        id: 'skill_ice_barrier',
+        name: 'Hàn Băng Chướng',
+        description: 'Hồi 200 HP tức thời.',
+        cooldown: 45000,
+        type: 'heal',
+        value: 200
+    }
   },
   {
     id: 'talisman_fire',
     name: 'Liệt Hỏa Phù',
     description: 'Lá bùa cháy mãi không tắt.',
     quantity: 1, type: 'equipment', slot: 'weapon', element: 'fire', rarity: 'uncommon', price: 1500,
-    stats: { spirit: 50, strength: 15, effectDescription: 'Gia Cường: Tăng 15% Sát thương Hỏa gây ra.' }
+    stats: { spirit: 50, strength: 15, effectDescription: 'Gia Cường: Tăng 15% Sát thương Hỏa gây ra.' },
+    activeSkill: {
+        id: 'skill_fire_burst',
+        name: 'Bùng Nổ Hỏa Diễm',
+        description: 'Tăng 100 Tấn Công trong 5s.',
+        cooldown: 60000,
+        duration: 5000,
+        type: 'buff_atk',
+        value: 100
+    }
   },
   {
     id: 'bracelet_wood',
@@ -57,13 +109,21 @@ export const GAME_ITEMS: Item[] = [
     stats: { spirit: 20, poisonRes: 20, effectDescription: 'Liên Kết: Đòn hệ Mộc gây thêm 5% sát thương lan.' }
   },
 
-  // --- TRANG BỊ: CẢNH GIỚI KIM ĐAN / NGUYÊN ANH ---
+  // --- TRANG BỊ: CẢNH GIỚI KIM ĐAN (9-11) ---
   {
     id: 'sword_breaker',
     name: 'Phá Giới Kiếm',
     description: 'Kiếm chuyên dùng phá vỡ kết giới.',
     quantity: 1, type: 'equipment', slot: 'weapon', element: 'metal', rarity: 'rare', price: 5000,
-    stats: { spirit: 100, strength: 50, magicPenetration: 10, effectDescription: 'Xuyên Giới: +10% Xuyên Phá Linh Lực.' }
+    stats: { spirit: 100, strength: 50, magicPenetration: 10, effectDescription: 'Xuyên Giới: +10% Xuyên Phá Linh Lực.' },
+    activeSkill: {
+        id: 'skill_void_slash',
+        name: 'Phá Không Trảm',
+        description: 'Gây 500 sát thương chuẩn lên kẻ địch.',
+        cooldown: 20000,
+        type: 'dmg_burst',
+        value: 500
+    }
   },
   {
     id: 'artifact_soul',
@@ -82,6 +142,15 @@ export const GAME_ITEMS: Item[] = [
 ];
 
 export const CRAFTABLE_ITEMS = [
+  // Đan dược thường
+  { id: 'pill_small_qi', cost: { herbs: 10, spiritStones: 10 }, ...GAME_ITEMS.find(i => i.id === 'pill_small_qi')! },
+  
+  // Đan dược chỉ số vĩnh viễn
+  { id: 'pill_hp_permanent', cost: { herbs: 20, spiritStones: 50 }, ...GAME_ITEMS.find(i => i.id === 'pill_hp_permanent')! },
+  { id: 'pill_attack_permanent', cost: { herbs: 40, ores: 10, spiritStones: 100 }, ...GAME_ITEMS.find(i => i.id === 'pill_attack_permanent')! },
+  { id: 'pill_defense_permanent', cost: { herbs: 30, ores: 20, spiritStones: 100 }, ...GAME_ITEMS.find(i => i.id === 'pill_defense_permanent')! },
+  
+  // Vật phẩm khác
   { id: 'sword_black_iron', cost: { ores: 20, spiritStones: 50 }, ...GAME_ITEMS.find(i => i.id === 'sword_black_iron')! },
   { id: 'armor_wood', cost: { herbs: 30, spiritStones: 50 }, ...GAME_ITEMS.find(i => i.id === 'armor_wood')! },
   { id: 'pill_protection', cost: { herbs: 100, spiritStones: 500 }, ...GAME_ITEMS.find(i => i.id === 'pill_protection')! },
