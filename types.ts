@@ -5,6 +5,8 @@ export enum ResourceType {
   ORES = 'Khoáng Thạch',
 }
 
+export type CultivationPath = 'none' | 'righteous' | 'devil';
+
 export interface Resources {
   qi: number;
   maxQi: number;
@@ -41,6 +43,7 @@ export interface LogEntry {
 
 export interface GameState {
   playerName: string;
+  cultivationPath: CultivationPath; // New field
   resources: Resources;
   realmIndex: number;
   clickMultiplier: number;
@@ -63,4 +66,5 @@ export type GameAction =
   | { type: 'USE_ITEM'; payload: string }
   | { type: 'ADD_LOG'; payload: Omit<LogEntry, 'id' | 'timestamp'> }
   | { type: 'SET_PLAYER_NAME'; payload: string }
+  | { type: 'CHOOSE_PATH'; payload: CultivationPath } // New action
   | { type: 'LOAD_GAME'; payload: GameState };

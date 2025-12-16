@@ -7,11 +7,21 @@ import { REALMS, INITIAL_STATE, CRAFTABLE_ITEMS } from '../constants';
 const gameReducer = (state: GameState, action: GameAction): GameState => {
   const currentRealm = REALMS[state.realmIndex];
 
+  // PATH BONUSES CONSTANTS
+  const RIGHTEOUS_PASSIVE_BONUS = 1.2; // +20% Passive Qi
+  const DEVIL_CLICK_BONUS = 1.2;       // +20% Click Qi
+  const RIGHTEOUS_DEF_BONUS = 1.3;     // +30% Defense (Effective HP)
+  const DEVIL_LOOT_BONUS = 0.2;        // +20% Encounter/Loot Rate
+
   switch (action.type) {
     case 'TICK': {
       // 1. Calculate Passive Qi Generation
       const deltaSeconds = action.payload / 1000;
-      const qiGain = currentRealm.baseQiGeneration * deltaSeconds;
+      
+      let passiveMultiplier = 1;
+      if (state.cultivationPath === 'righteous') passiveMultiplier = RIGHTEOUS_PASSIVE_BONUS;
+
+      const qiGain = (currentRealm.baseQiGeneration * passiveMultiplier) * deltaSeconds;
       
       let newQi = state.resources.qi + qiGain;
       if (newQi > currentRealm.maxQiCap) newQi = currentRealm.maxQiCap;
@@ -24,28 +34,33 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
       if (state.isExploring) {
         // Heal slowly if not dead
         if (state.hp > 0) {
-            // Encounter chance per tick (Increased to 50% - faster exploration)
-            if (Math.random() < 0.50) { 
+            // Base encounter chance 50%
+            let encounterChance = 0.50;
+            // Devil path gets more encounters (more loot, more danger)
+            if (state.cultivationPath === 'devil') encounterChance += DEVIL_LOOT_BONUS;
+
+            if (Math.random() < encounterChance) { 
                 // --- SCALING MONSTER DAMAGE ---
-                // Monster attack power is roughly 60% - 90% of the Player's Realm Attack stat.
-                // This ensures monsters scale with the player.
                 const monsterPower = Math.floor(currentRealm.attack * (0.6 + Math.random() * 0.3));
                 
+                // Calculate Player Defense
+                let playerDef = currentRealm.defense;
+                if (state.cultivationPath === 'righteous') playerDef *= RIGHTEOUS_DEF_BONUS;
+
                 // Damage calculation: Monster Atk - Player Def (Min 1 damage)
-                // We add a small flat scaling (currentRealm.id * 2) to ensure even low tiers take chip damage.
-                const damageTaken = Math.max(1, (monsterPower + (currentRealm.id * 2)) - currentRealm.defense);
+                const damageTaken = Math.max(1, (monsterPower + (currentRealm.id * 2)) - playerDef);
                 
                 // Player takes damage
                 newHp = Math.max(0, state.hp - damageTaken);
                 
                 // --- SCALING LOOT ---
                 // Loot increases significantly with Realm Level (currentRealm.id)
+                // Devil path might get slight bonus to amount (handled via encounter frequency already, but let's add logic if needed later)
                 
                 // Herbs: Base (1-3) + Realm Level
                 const herbsFound = Math.floor(Math.random() * 3) + 1 + currentRealm.id;
                 
                 // Ores: Base chance 30% + 1% per Realm Level. 
-                // Quantity: Base (1-2) + 1 for every 3 Realm Levels.
                 const oreChance = 0.3 + (currentRealm.id * 0.01);
                 let oresFound = 0;
                 if (Math.random() < oreChance) {
@@ -53,7 +68,6 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 }
 
                 // Spirit Stones: Base (1-10) + (Realm Level * 8)
-                // Higher realms yield much more money.
                 const stonesFound = Math.floor(Math.random() * 10) + 1 + (currentRealm.id * 8);
 
                 newResources.herbs += herbsFound;
@@ -64,7 +78,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                     id: Date.now(),
                     timestamp: Date.now(),
                     type: 'combat',
-                    message: `Gặp yêu thú! Chịu ${damageTaken} sát thương. Thu được: ${herbsFound} Thảo, ${oresFound} Khoáng, ${stonesFound} Linh Thạch.`
+                    message: `Gặp yêu thú! Chịu ${Math.floor(damageTaken)} sát thương. Thu được: ${herbsFound} Thảo, ${oresFound} Khoáng, ${stonesFound} Linh Thạch.`
                 });
             }
         } else {
@@ -98,7 +112,10 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
     }
 
     case 'GATHER_QI': {
-      const gain = (1 + currentRealm.baseQiGeneration) * state.clickMultiplier;
+      let clickMultiplier = state.clickMultiplier;
+      if (state.cultivationPath === 'devil') clickMultiplier *= DEVIL_CLICK_BONUS;
+
+      const gain = (1 + currentRealm.baseQiGeneration) * clickMultiplier;
       let newQi = state.resources.qi + gain;
       if (newQi > currentRealm.maxQiCap) newQi = currentRealm.maxQiCap;
       return {
@@ -230,6 +247,13 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
     case 'SET_PLAYER_NAME':
         return { ...state, playerName: action.payload };
 
+    case 'CHOOSE_PATH':
+        return { 
+            ...state, 
+            cultivationPath: action.payload,
+            logs: [{ id: Date.now(), timestamp: Date.now(), type: 'info', message: `Đạo tâm đã định. Bạn đã chọn con đường: ${action.payload === 'righteous' ? 'Chính Đạo' : 'Ma Đạo'}.` }, ...state.logs]
+        };
+
     case 'LOAD_GAME':
         // Merge loaded state with INITIAL_STATE to ensure new fields are present if version changed
         return {
@@ -321,10 +345,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // 2. Force write to localStorage immediately (overwriting old data)
           localStorage.setItem('cuu-gioi-bat-hu-save', data);
-          
-          // Note: We DO NOT call window.location.reload() anymore. 
-          // This prevents the 'beforeunload' event from triggering the auto-save 
-          // which was causing the race condition.
           
       } catch(e) {
           alert("Lỗi khi nạp dữ liệu: " + e);

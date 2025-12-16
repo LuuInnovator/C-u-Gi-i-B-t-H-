@@ -1,4 +1,4 @@
-import { Realm, Item } from './types';
+import { Realm, Item, GameState } from './types';
 
 export const REALMS: Realm[] = [
   { id: 0, name: 'Phàm Nhân', baseQiGeneration: 0, maxQiCap: 100, breakthroughChance: 1.0, attack: 1, defense: 0 },
@@ -38,8 +38,9 @@ export const CRAFTABLE_ITEMS = [
   }
 ];
 
-export const INITIAL_STATE = {
+export const INITIAL_STATE: GameState = {
   playerName: 'Đạo Hữu Vô Danh',
+  cultivationPath: 'none',
   resources: {
     qi: 0,
     maxQi: 100,

@@ -40,8 +40,8 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-ink-900 text-slate-200 overflow-hidden font-sans">
-      {/* Show Welcome Screen if player name is default */}
-      {state.playerName === 'Đạo Hữu Vô Danh' && <WelcomeModal />}
+      {/* Show Welcome Screen if player name is default OR cultivation path is missing (legacy saves) */}
+      {(state.playerName === 'Đạo Hữu Vô Danh' || state.cultivationPath === 'none') && <WelcomeModal />}
 
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       
