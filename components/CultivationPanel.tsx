@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useGame } from '../context/GameContext';
-import { Zap, Shield, ArrowUpCircle, Flame, ShieldCheck, Skull, Sword, Sparkles, Gem, AlertTriangle } from 'lucide-react';
-import { TRAITS } from '../constants';
+import { Zap, Shield, ArrowUpCircle, Flame, ShieldCheck, Skull, Sword, Sparkles, Gem, AlertTriangle, Infinity } from 'lucide-react';
+import { TRAITS, REALMS } from '../constants';
+import AscensionModal from './AscensionModal';
 
 const CultivationPanel: React.FC = () => {
   const { state, dispatch, getCurrentRealm } = useGame();
@@ -9,6 +10,8 @@ const CultivationPanel: React.FC = () => {
   
   // Re-render periodically for timer update
   const [, setTick] = useState(0);
+  const [showAscension, setShowAscension] = useState(false);
+
   useEffect(() => {
      const t = setInterval(() => setTick(n => n + 1), 1000);
      return () => clearInterval(t);
@@ -21,6 +24,9 @@ const CultivationPanel: React.FC = () => {
   // Weakness Calculation
   const weaknessLeft = Math.max(0, (state.weaknessEndTime || 0) - Date.now());
   const isWeakened = weaknessLeft > 0;
+
+  // Max Level Check
+  const isMaxLevel = state.realmIndex >= REALMS.length - 1;
 
   // Render Path Icon
   const PathIcon = state.cultivationPath === 'devil' ? Flame : ShieldCheck;
@@ -48,8 +54,21 @@ const CultivationPanel: React.FC = () => {
       totalDefense = Math.floor(totalDefense * 1.5);
   }
 
+  // Bonus from Talents (Visual only here, logic in reducer)
+  const talentStartStats = (state.prestige?.talents?.['divine_body'] || 0) * 5;
+  totalAttack += talentStartStats;
+  totalDefense += talentStartStats;
+
   const artifactPassive = state.equippedItems.artifact?.stats?.qiRegen || 0;
   let baseRegen = realm.baseQiGeneration;
+  
+  // Apply Talent Qi Bonus (Visual)
+  const talentQiBonus = (state.prestige?.talents?.['heavenly_roots'] || 0) * 0.1;
+  const rootQuality = state.prestige.spiritRootQuality || 0;
+  const rootBonus = rootQuality / 100;
+  
+  baseRegen *= (1 + talentQiBonus + rootBonus);
+
   if (state.cultivationPath === 'righteous') baseRegen *= 1.2;
   if (state.traits.includes('great_enlightenment')) baseRegen *= 1.5;
   if (state.traits.includes('life_absorption')) baseRegen *= 1.3;
@@ -58,6 +77,8 @@ const CultivationPanel: React.FC = () => {
   const totalRegen = baseRegen + artifactPassive;
 
   let clickPower = (1 + realm.baseQiGeneration) * (state.cultivationPath === 'devil' ? 1.2 : 1);
+  clickPower *= (1 + talentQiBonus); // Talent Click Bonus
+
   if (isTraitor) clickPower *= 0.5;
   const totalClick = clickPower;
   
@@ -66,7 +87,8 @@ const CultivationPanel: React.FC = () => {
   let finalBreakthroughChance = (realm.breakthroughChance + pillBonus);
   if (state.traits.includes('dao_injury')) finalBreakthroughChance += 0.1;
   if (state.traits.includes('heavenly_jealousy')) finalBreakthroughChance -= 0.1;
-  
+  finalBreakthroughChance += rootBonus / 5; // Root bonus to visual (divided by 5 for balance in display, similar to reducer logic)
+
   if (isWeakened) finalBreakthroughChance -= 0.3; // Show Weakness penalty
   
   const displayChance = Math.max(0, Math.min(100, Math.floor(finalBreakthroughChance * 100)));
@@ -77,8 +99,23 @@ const CultivationPanel: React.FC = () => {
   if (state.realmIndex >= 9) realmTrait = { title: "Linh Lực Tinh Thuần", desc: "Ưu tiên Linh Lực & Dmg Phép", icon: <Zap size={16}/>, color: "text-purple-400" };
   if (state.realmIndex >= 12) realmTrait = { title: "Nguyên Thần Xuất Khiếu", desc: "Xuyên thấu & Sát thương Tinh Thần", icon: <Sparkles size={16}/>, color: "text-pink-400" };
 
+  // Helper to get Spirit Root Name
+  const getSpiritRootInfo = (quality: number) => {
+      if (quality >= 100) return { name: 'Hỗn Độn Linh Căn', color: 'text-red-500', tier: 'Tối Thượng' };
+      if (quality >= 80) return { name: 'Tiên Thiên Linh Căn', color: 'text-spirit-gold', tier: 'Cực Phẩm' };
+      if (quality >= 60) return { name: 'Thiên Linh Căn', color: 'text-purple-400', tier: 'Thượng Phẩm' };
+      if (quality >= 40) return { name: 'Địa Linh Căn', color: 'text-blue-400', tier: 'Trung Phẩm' };
+      if (quality >= 20) return { name: 'Chân Linh Căn', color: 'text-green-400', tier: 'Hạ Phẩm' };
+      if (quality > 0) return { name: 'Tạp Linh Căn', color: 'text-slate-400', tier: 'Phàm Phẩm' };
+      return { name: 'Phế Linh Căn', color: 'text-gray-500', tier: 'Vô Dụng' };
+  };
+
+  const rootInfo = getSpiritRootInfo(rootQuality);
+
   return (
     <div className="h-full flex flex-col items-center justify-start p-4 md:p-8 space-y-6 animate-fadeIn overflow-y-auto">
+      <AscensionModal isOpen={showAscension} onClose={() => setShowAscension(false)} />
+
       {/* Realm Badge */}
       <div className="relative group mt-4 flex-shrink-0">
         <div className={`absolute -inset-1 bg-gradient-to-r ${state.cultivationPath === 'devil' ? 'from-red-600 to-orange-600' : 'from-jade-500 to-indigo-500'} rounded-full blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200`}></div>
@@ -109,15 +146,29 @@ const CultivationPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Realm Trait Box */}
-      <div className="bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 flex items-center gap-3 flex-shrink-0">
-            <div className={`p-2 rounded-full bg-slate-900 border border-slate-600 ${realmTrait.color}`}>
-                {realmTrait.icon}
-            </div>
-            <div>
-                <h4 className={`text-sm font-bold ${realmTrait.color}`}>{realmTrait.title}</h4>
-                <p className="text-[10px] text-slate-400">{realmTrait.desc}</p>
-            </div>
+      {/* Realm Trait & Spirit Root Box */}
+      <div className="flex gap-2 justify-center flex-wrap">
+          <div className="bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 flex items-center gap-3 flex-shrink-0">
+                <div className={`p-2 rounded-full bg-slate-900 border border-slate-600 ${realmTrait.color}`}>
+                    {realmTrait.icon}
+                </div>
+                <div>
+                    <h4 className={`text-sm font-bold ${realmTrait.color}`}>{realmTrait.title}</h4>
+                    <p className="text-[10px] text-slate-400">{realmTrait.desc}</p>
+                </div>
+          </div>
+          
+          <div className="bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 flex items-center gap-3 flex-shrink-0">
+                <div className={`p-2 rounded-full bg-slate-900 border border-slate-600 ${rootInfo.color}`}>
+                    <Gem size={16} />
+                </div>
+                <div>
+                    <h4 className={`text-sm font-bold ${rootInfo.color}`}>{rootInfo.name}</h4>
+                    <p className="text-[10px] text-slate-400">
+                        {rootInfo.tier} ({rootQuality}/100) • Hấp thụ +{(rootBonus * 100).toFixed(0)}%
+                    </p>
+                </div>
+          </div>
       </div>
 
       {/* WEAKNESS WARNING */}
@@ -182,19 +233,29 @@ const CultivationPanel: React.FC = () => {
       <div className="flex flex-col space-y-4 w-full max-w-xs flex-shrink-0">
         {canBreakthrough ? (
              <div className="space-y-2">
-                 <button 
-                    onClick={() => dispatch({ type: 'ATTEMPT_BREAKTHROUGH' })}
-                    className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transform transition-all duration-200 flex items-center justify-center space-x-2 border-2 
-                        ${isWeakened 
-                            ? 'bg-gradient-to-r from-red-900 to-slate-700 border-red-500/50 cursor-pointer hover:scale-100' 
-                            : 'bg-gradient-to-r from-spirit-gold to-yellow-600 border-yellow-400 hover:scale-105 animate-pulse'}`}
-                >
-                    <ArrowUpCircle size={24} className={isWeakened ? 'text-red-400' : 'text-white'} />
-                    <span>Đột Phá ({displayChance}%)</span>
-                </button>
-                {pillBonus > 0 && (
+                {isMaxLevel ? (
+                    <button 
+                        onClick={() => setShowAscension(true)}
+                        className="w-full py-4 rounded-xl font-bold text-white shadow-lg transform transition-all duration-200 flex items-center justify-center space-x-2 border-2 bg-gradient-to-r from-spirit-gold via-purple-600 to-spirit-gold border-purple-400 animate-pulse hover:scale-105"
+                    >
+                        <Infinity size={24} className="text-white" />
+                        <span>Phi Thăng / Chuyển Sinh</span>
+                    </button>
+                ) : (
+                     <button 
+                        onClick={() => dispatch({ type: 'ATTEMPT_BREAKTHROUGH' })}
+                        className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transform transition-all duration-200 flex items-center justify-center space-x-2 border-2 
+                            ${isWeakened 
+                                ? 'bg-gradient-to-r from-red-900 to-slate-700 border-red-500/50 cursor-pointer hover:scale-100' 
+                                : 'bg-gradient-to-r from-spirit-gold to-yellow-600 border-yellow-400 hover:scale-105 animate-pulse'}`}
+                    >
+                        <ArrowUpCircle size={24} className={isWeakened ? 'text-red-400' : 'text-white'} />
+                        <span>Đột Phá ({displayChance}%)</span>
+                    </button>
+                )}
+                {pillBonus > 0 && !isMaxLevel && (
                     <p className="text-center text-xs text-jade-400 animate-pulse">
-                        Đang áp dụng hiệu ứng Trúc Cơ Đan (+20%)
+                        Đang áp dụng hiệu ứng Đan Dược (+{(pillBonus * 100).toFixed(0)}%)
                     </p>
                 )}
             </div>
@@ -210,10 +271,15 @@ const CultivationPanel: React.FC = () => {
       </div>
 
       {/* Flavor Text */}
-      <div className="max-w-md text-center text-slate-500 text-sm italic font-serif pb-4">
-         {state.cultivationPath === 'devil' 
-            ? "\"Muốn thành đại đạo, phải dám đi ngược ý trời, đạp lên xương máu mà đi.\"" 
-            : "\"Người tu tiên phải nghịch thiên cải mệnh, nhưng tâm phải sáng, chí phải bền.\""}
+      <div className="max-w-md text-center text-slate-500 text-sm italic font-serif pb-4 flex flex-col gap-2">
+         <p>
+            {state.cultivationPath === 'devil' 
+                ? "\"Muốn thành đại đạo, phải dám đi ngược ý trời, đạp lên xương máu mà đi.\"" 
+                : "\"Người tu tiên phải nghịch thiên cải mệnh, nhưng tâm phải sáng, chí phải bền.\""}
+         </p>
+         <p className="text-[10px] text-slate-600 not-italic font-sans">
+            *Nhớ lưu game thường xuyên tại phần Thiết Lập để tránh mất dữ liệu.
+         </p>
       </div>
     </div>
   );

@@ -10,6 +10,8 @@ import WelcomeModal from './components/WelcomeModal';
 import EncounterModal from './components/EncounterModal';
 import SectPanel from './components/SectPanel';
 import MarketPanel from './components/MarketPanel';
+import TalentTreePanel from './components/TalentTreePanel';
+import StashPanel from './components/StashPanel';
 import { useGame } from './context/GameContext';
 import { Info } from 'lucide-react';
 
@@ -25,6 +27,8 @@ const App: React.FC = () => {
         return <CharacterPanel />;
       case 'inventory':
         return <InventoryPanel />;
+      case 'stash':
+        return <StashPanel />;
       case 'crafting':
         return <CraftingPanel />;
       case 'market':
@@ -35,6 +39,8 @@ const App: React.FC = () => {
         return <SectPanel />;
       case 'settings':
         return <SettingsPanel />;
+      case 'talents':
+        return <TalentTreePanel />;
       default:
         return (
             <div className="flex flex-col items-center justify-center h-full text-slate-500">

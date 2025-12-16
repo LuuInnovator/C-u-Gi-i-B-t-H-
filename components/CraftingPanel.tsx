@@ -50,7 +50,14 @@ const CraftingPanel: React.FC = () => {
                             </div>
                             <button 
                                 disabled={!canCraft}
-                                onClick={() => dispatch({ type: 'CRAFT_ITEM', payload: { itemId: item.id, cost: item.cost || {} } })}
+                                onClick={() => dispatch({ 
+                                    type: 'CRAFT_ITEM', 
+                                    payload: { 
+                                        itemId: item.id, 
+                                        cost: item.cost || {},
+                                        type: item.type as 'consumable' | 'equipment'
+                                    } 
+                                })}
                                 className={`mt-4 w-full py-2 rounded flex items-center justify-center space-x-2 text-sm font-bold transition-all active:scale-95
                                     ${canCraft 
                                         ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-lg' 

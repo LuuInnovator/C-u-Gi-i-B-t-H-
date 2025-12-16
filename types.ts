@@ -135,6 +135,7 @@ export interface EncounterOption {
   reqPath?: CultivationPath; 
   resourceCost?: Partial<Resources>; 
   gainTrait?: string; 
+  gainItem?: { itemId: string; quantity: number }; // Hỗ trợ nhận vật phẩm
 }
 
 export interface Encounter {
@@ -164,6 +165,32 @@ export interface ActiveBuff {
     type: SkillType;
     value: number;
     endTime: number;
+}
+
+// --- HỆ THỐNG THIÊN PHÚ / LUÂN HỒI ---
+export interface Talent {
+    id: string;
+    name: string;
+    description: string;
+    maxLevel: number;
+    baseCost: number;
+    costMultiplier: number; // Hệ số tăng giá mỗi cấp
+    effectPerLevel: number; // Giá trị tác dụng mỗi cấp (vd: 0.1 = 10%)
+    type: 'cultivation' | 'combat' | 'economy';
+}
+
+export interface PrestigeState {
+    currency: number; // Tinh Hoa Thiên Đạo
+    ascensionCount: number; // Số lần đã phi thăng/chuyển sinh
+    talents: Record<string, number>; // id thiên phú -> level hiện tại
+    spiritRootQuality: number; // Phẩm chất linh căn (0-100) - Giữ lại sau phi thăng
+}
+
+export interface ProfessionState {
+    alchemyLevel: number; // Cấp Luyện Đan
+    blacksmithLevel: number; // Cấp Luyện Khí
+    alchemyExp: number;
+    blacksmithExp: number;
 }
 
 export interface GameState {
@@ -202,6 +229,13 @@ export interface GameState {
   // Renaming System
   nameChangeCount: number;
   lastNameChangeTime: number;
+
+  // Prestige / Ascension System
+  prestige: PrestigeState;
+  
+  // Permanent Systems (Persist on Ascension)
+  professions: ProfessionState;
+  stash: Item[]; // Kho chứa vĩnh viễn (Bank)
 }
 
 export type GameAction =
@@ -211,7 +245,7 @@ export type GameAction =
   | { type: 'START_EXPLORATION'; payload: ExplorationType } 
   | { type: 'START_DUNGEON'; payload: string } 
   | { type: 'STOP_EXPLORATION' }
-  | { type: 'CRAFT_ITEM'; payload: { itemId: string; cost: Partial<Resources> } }
+  | { type: 'CRAFT_ITEM'; payload: { itemId: string; cost: Partial<Resources>; type: 'consumable' | 'equipment' } }
   | { type: 'USE_ITEM'; payload: string }
   | { type: 'EQUIP_ITEM'; payload: string } 
   | { type: 'UNEQUIP_ITEM'; payload: EquipmentSlot }
@@ -219,7 +253,7 @@ export type GameAction =
   | { type: 'SELL_ITEM'; payload: { itemId: string; amount: number } } 
   | { type: 'ADD_LOG'; payload: Omit<LogEntry, 'id' | 'timestamp'> }
   | { type: 'SET_PLAYER_NAME'; payload: string }
-  | { type: 'RENAME_CHARACTER'; payload: string } // Action đổi tên
+  | { type: 'RENAME_CHARACTER'; payload: string } 
   | { type: 'SET_AVATAR'; payload: string } 
   | { type: 'CHOOSE_PATH'; payload: CultivationPath } 
   | { type: 'JOIN_SECT'; payload: string } 
@@ -227,4 +261,8 @@ export type GameAction =
   | { type: 'TRIGGER_ENCOUNTER'; payload: string } 
   | { type: 'RESOLVE_ENCOUNTER'; payload: { encounterId: string; optionIndex: number } }
   | { type: 'LOAD_GAME'; payload: GameState }
-  | { type: 'ACTIVATE_SKILL'; payload: string };
+  | { type: 'ACTIVATE_SKILL'; payload: string }
+  | { type: 'ASCEND'; payload: { path: CultivationPath } } 
+  | { type: 'UPGRADE_TALENT'; payload: string }
+  | { type: 'DEPOSIT_STASH'; payload: { itemId: string; amount: number } }
+  | { type: 'WITHDRAW_STASH'; payload: { itemId: string; amount: number } };

@@ -7,6 +7,7 @@ export * from './data/traits';
 export * from './data/sects';
 export * from './data/dungeons';
 export * from './data/encounters';
+export * from './data/talents'; // Export Talents
 
 // Khởi tạo trạng thái ban đầu của game
 export const INITIAL_STATE: GameState = {
@@ -59,5 +60,22 @@ export const INITIAL_STATE: GameState = {
 
   // Renaming
   nameChangeCount: 0,
-  lastNameChangeTime: 0
+  lastNameChangeTime: 0,
+
+  // Prestige
+  prestige: {
+      currency: 0,
+      ascensionCount: 0,
+      talents: {},
+      spiritRootQuality: 0 // Bắt đầu từ 0 (Phế phẩm/Tạp căn cực hạn)
+  },
+
+  // Permanent Systems
+  professions: {
+      alchemyLevel: 1,
+      blacksmithLevel: 1,
+      alchemyExp: 0,
+      blacksmithExp: 0
+  },
+  stash: []
 };

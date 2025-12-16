@@ -8,7 +8,30 @@ export const GAME_ITEMS: Item[] = [
       description: 'Hồi phục ngay lập tức 10% Linh Khí tối đa.', 
       quantity: 1, type: 'consumable', price: 50, rarity: 'common' 
   },
-  { id: 'pill_breakthrough', name: 'Trúc Cơ Đan', description: '+20% Tỷ lệ đột phá.', quantity: 1, type: 'consumable', price: 500, rarity: 'uncommon' },
+  { 
+      id: 'pill_breakthrough', 
+      name: 'Trúc Cơ Đan', 
+      description: '+20% Tỷ lệ đột phá Trúc Cơ (Chỉ dùng cho Luyện Khí).', 
+      quantity: 1, type: 'consumable', price: 500, rarity: 'uncommon' 
+  },
+  { 
+      id: 'pill_golden_core', 
+      name: 'Kết Kim Đan', 
+      description: '+15% Tỷ lệ đột phá Kim Đan (Chỉ dùng cho Trúc Cơ).', 
+      quantity: 1, type: 'consumable', price: 2000, rarity: 'rare' 
+  },
+  { 
+      id: 'pill_nascent_soul', 
+      name: 'Nguyên Anh Đan', 
+      description: '+10% Tỷ lệ đột phá Nguyên Anh (Chỉ dùng cho Kim Đan).', 
+      quantity: 1, type: 'consumable', price: 8000, rarity: 'epic' 
+  },
+  { 
+      id: 'pill_divine_transformation', 
+      name: 'Hóa Thần Đan', 
+      description: '+5% Tỷ lệ đột phá Hóa Thần (Chỉ dùng cho Nguyên Anh).', 
+      quantity: 1, type: 'consumable', price: 25000, rarity: 'legendary' 
+  },
   { id: 'pill_protection', name: 'Hộ Mệnh Đan', description: 'Chống One-Hit trong 5 phút.', quantity: 1, type: 'consumable', price: 1500, rarity: 'rare' },
   
   // VẬT PHẨM ĐẶC BIỆT
@@ -17,6 +40,12 @@ export const GAME_ITEMS: Item[] = [
       name: 'Phù Lục Cải Mệnh', 
       description: 'Vật phẩm ẩn chứa thiên cơ, dùng để thay đổi Đạo Hiệu (Tên nhân vật).', 
       quantity: 1, type: 'consumable', price: 5000, rarity: 'epic' 
+  },
+  { 
+      id: 'pill_spirit_root', 
+      name: 'Tẩy Tủy Đan', 
+      description: 'Đoạt thiên địa tạo hóa! Tăng vĩnh viễn 1-2 điểm phẩm chất Linh Căn.', 
+      quantity: 1, type: 'consumable', price: 0, rarity: 'legendary' // Price 0 = Không bán trong shop
   },
 
   { id: 'ore_iron', name: 'Quặng Thiết', description: 'Nguyên liệu chế tạo cơ bản.', quantity: 1, type: 'material', price: 10, rarity: 'common' },
@@ -153,7 +182,15 @@ export const GAME_ITEMS: Item[] = [
 export const CRAFTABLE_ITEMS = [
   // Đan dược thường
   { id: 'pill_small_qi', cost: { herbs: 10, spiritStones: 10 }, ...GAME_ITEMS.find(i => i.id === 'pill_small_qi')! },
+  { id: 'pill_breakthrough', cost: { herbs: 50, ores: 10, spiritStones: 200 }, ...GAME_ITEMS.find(i => i.id === 'pill_breakthrough')! },
   
+  // Đan dược cấp cao
+  { id: 'pill_golden_core', cost: { herbs: 200, ores: 50, spiritStones: 1000 }, ...GAME_ITEMS.find(i => i.id === 'pill_golden_core')! },
+  { id: 'pill_nascent_soul', cost: { herbs: 1000, ores: 200, spiritStones: 5000 }, ...GAME_ITEMS.find(i => i.id === 'pill_nascent_soul')! },
+  { id: 'pill_divine_transformation', cost: { herbs: 5000, ores: 1000, spiritStones: 20000 }, ...GAME_ITEMS.find(i => i.id === 'pill_divine_transformation')! },
+
+  // --- Không có công thức Tẩy Tủy Đan ---
+
   // Đan dược chỉ số vĩnh viễn
   { id: 'pill_hp_permanent', cost: { herbs: 20, spiritStones: 50 }, ...GAME_ITEMS.find(i => i.id === 'pill_hp_permanent')! },
   { id: 'pill_attack_permanent', cost: { herbs: 40, ores: 10, spiritStones: 100 }, ...GAME_ITEMS.find(i => i.id === 'pill_attack_permanent')! },

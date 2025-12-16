@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Mountain, Backpack, Swords, Settings, Store, User, Hammer, Lock } from 'lucide-react';
+import { Sparkles, Mountain, Backpack, Swords, Settings, Store, User, Hammer, Lock, Star, Archive } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 
 interface SidebarProps {
@@ -13,20 +13,23 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   // Logic Điều kiện mở khóa tính năng
   const isQiCondensation1 = state.realmIndex >= 1; // Level 1 = Luyện Khí Tầng 1
   const isFoundation = state.realmIndex >= 6;      // Level 6 = Trúc Cơ Sơ Kỳ
+  const hasAscended = (state.prestige?.ascensionCount || 0) > 0; // Đã từng phi thăng?
 
   const menuItems = [
     { id: 'cultivation', label: 'Tu Luyện', icon: Sparkles, locked: false },
     { id: 'character', label: 'Nhân Vật', icon: User, locked: false },
-    { id: 'inventory', label: 'Túi Đồ', icon: Backpack, locked: false },
-    { id: 'exploration', label: 'Du Ngoạn', icon: Mountain, locked: false },
     
-    // Thương Hội: Mở ngay từ đầu
-    { id: 'market', label: 'Thương Hội', icon: Store, locked: false },
+    // Tab Luân Hồi (Talents)
+    { id: 'talents', label: 'Luân Hồi', icon: Star, locked: !hasAscended && state.realmIndex < 15, req: 'Hóa Thần / Đã Phi Thăng' },
 
-    // Chế Tạo: Yêu cầu Luyện Khí Tầng 1
-    { id: 'crafting', label: 'Chế Tạo', icon: Hammer, locked: !isQiCondensation1, req: 'Luyện Khí Tầng 1' },
+    { id: 'inventory', label: 'Túi Đồ', icon: Backpack, locked: false },
     
-    // Tông Môn: Yêu cầu Trúc Cơ
+    // Kho Chứa (Stash) - Mở sau phi thăng hoặc đạt Kim Đan
+    { id: 'stash', label: 'Kho Chứa', icon: Archive, locked: !hasAscended && state.realmIndex < 9, req: 'Kim Đan / Đã Phi Thăng' },
+
+    { id: 'exploration', label: 'Du Ngoạn', icon: Mountain, locked: false },
+    { id: 'market', label: 'Thương Hội', icon: Store, locked: false },
+    { id: 'crafting', label: 'Chế Tạo', icon: Hammer, locked: !isQiCondensation1, req: 'Luyện Khí Tầng 1' },
     { id: 'sect', label: 'Tông Môn', icon: Swords, locked: !isFoundation, req: 'Trúc Cơ' }, 
     
     { id: 'settings', label: 'Thiết Lập', icon: Settings, locked: false },

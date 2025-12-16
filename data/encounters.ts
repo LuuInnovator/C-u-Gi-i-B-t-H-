@@ -160,5 +160,27 @@ export const ENCOUNTERS: Encounter[] = [
                 type: 'normal'
             }
         ]
+    },
+    // --- CƠ DUYÊN NHẬN TẨY TỦY ĐAN ---
+    {
+        id: 'ancient_remnant',
+        title: 'Kỳ Ngộ: Di Tích Cổ Tiên',
+        description: 'Ngươi lạc vào một vườn thuốc bỏ hoang từ thượng cổ. Ở trung tâm có một lò luyện đan vẫn đang cháy âm ỉ, bên trong tỏa ra mùi hương lạ lùng.',
+        options: [
+            {
+                label: 'Mở lò lấy thuốc',
+                description: 'Cần tiêu hao 1000 Linh Thạch để phá giải trận pháp bảo vệ lò.',
+                type: 'righteous',
+                resourceCost: { spiritStones: 1000 },
+                gainItem: { itemId: 'pill_spirit_root', quantity: 1 }
+            },
+            {
+                label: 'Tìm kiếm xung quanh',
+                description: 'Có thể nhặt được một ít thảo dược.',
+                type: 'normal',
+                resourceCost: {},
+                gainItem: { itemId: 'wood_spirit', quantity: 5 }
+            }
+        ]
     }
 ];
